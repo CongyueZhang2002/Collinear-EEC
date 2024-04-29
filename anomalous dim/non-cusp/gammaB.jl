@@ -2,6 +2,8 @@
 
 include("..\\..\\strong coupling\\constants.jl")
 include("..\\..\\strong coupling\\alpha_s.jl")
+include("..\\cusp\\cusp.jl")
+include("gammaS.jl")
 
 # Beam
 
@@ -28,7 +30,7 @@ end
 function γB3_func(nf)
 
     β0 = 4*β0_func(nf)
-    β1 = 4^2*β0_func(nf)
+    β1 = 4^2*β1_func(nf)
 
     γB3 = 2CF * (
           CA^2 * (52019/162 - 1682/27*z2 - 2056/9*z3 - 820/3*z4 + 176/3*z2*z3 + 232z5) 
@@ -65,4 +67,16 @@ function γB_func(; αs::Float64, order::Int64, nf::Int64)
 
     return total
 
+end
+
+# final γJ in integration
+function γJ_f_func(; μ::Float64, νdQ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+
+    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+    Γ = Γ_func(αs=αs, order=order+1, nf=nf)
+    γJ = γB_func(αs=αs, order=order, nf=nf) + γS_func(αs=αs, order=order, nf=nf)
+
+    γJ_f = 2*Γ*log(νdQ) + γJ
+
+    return γJ_f
 end

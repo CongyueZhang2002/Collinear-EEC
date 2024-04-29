@@ -2,6 +2,7 @@
 
 include("..\\..\\strong coupling\\constants.jl")
 include("..\\..\\strong coupling\\alpha_s.jl")
+include("..\\cusp\\cusp.jl")
 
 # Soft
 
@@ -24,7 +25,7 @@ end
 function γS3_func(nf)
 
     β0 = 4*β0_func(nf)
-    β1 = 4^2*β0_func(nf)
+    β1 = 4^2*β1_func(nf)
 
     γS3 = 2CF * (
           CA^2 * (-37871/162 + 620/27*z2 + 2548/9*z3 + 144z4 - 176/3*z2*z3 - 192z5) 
@@ -35,7 +36,6 @@ function γS3_func(nf)
 
     return γS3
 end
-
 
 function γS_func(; αs::Float64, order::Int64, nf::Int64)
 
@@ -59,4 +59,16 @@ function γS_func(; αs::Float64, order::Int64, nf::Int64)
 
     return total
 
+end
+
+# final γS in integration
+function γS_f_func(; μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+
+    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+    Γ = Γ_func(αs=αs, order=order+1, nf=nf)
+    γS = -γS_func(αs=αs, order=order, nf=nf)
+
+    γS_f = 4*Γ*log(μ/ν) + γS
+    
+    return γS_f
 end

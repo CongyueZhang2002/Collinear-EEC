@@ -1,9 +1,11 @@
+# up to 4-loop beta function and strong coupling https://arxiv.org/pdf/2403.04077
+
 include("constants.jl")
 
 # μf: final scale
 # μi: initial scale
 # αs: alpha_s at initial scale
-# order: 1, 2, 3
+# order: 1, 2, 3, 4
 # nf: active quarks
 
 function β0_func(nf) 
@@ -42,13 +44,14 @@ function alpha_s_func(; μf::Float64, μi::Float64, αs::Float64, order::Int64, 
     β2 = β2_func(nf)
     β3 = β3_func(nf)
 
-    l = 1 + β0*αs*log(μf^2/μi^2) / π
+    l = 1 + β0*αs*log(μf^2/μi^2)/π
 
-    order1 = 1 - αs/(π*l)*β1/β0*log(l)
-    order2 = (αs/(π*l))^2 * (
+    order1 = 1 
+    order2 = - αs/(π*l)*β1/β0*log(l)
+    order3 = (αs/(π*l))^2 * (
         (β1/β0)^2 * (log(l)^2 - log(l) + l - 1) - β2/β0 * (l - 1)
     )
-    order3 = (αs/(π*l))^3 * (
+    order4 = (αs/(π*l))^3 * (
         (β1/β0)^3 * (-log(l)^3 + 5/2*log(l)^2 - 2*(l - 1)*log(l) - (l-1)^2/2)
         + β1*β2/β0^2 * ((l - 1)*l + (2*l - 3)*log(l))
         + β3/β0 * (1 - l^2)/2
@@ -62,6 +65,9 @@ function alpha_s_func(; μf::Float64, μi::Float64, αs::Float64, order::Int64, 
     end
     if order == 3 
         total = order1 + order2 + order3
+    end
+    if order == 4 
+        total = order1 + order2 + order3 + order4
     end
 
     αs_final = αs/l*total
