@@ -70,7 +70,7 @@ function γB_func(; αs::Float64, order::Int64, nf::Int64)
 end
 
 # final γJ in integration
-function γJ_f_func(; μ::Float64, νdQ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+function γJ_final(; μ::Float64, νdQ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
 
     αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
     Γ = Γ_func(αs=αs, order=order+1, nf=nf)

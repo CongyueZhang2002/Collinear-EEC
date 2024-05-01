@@ -62,7 +62,7 @@ function γS_func(; αs::Float64, order::Int64, nf::Int64)
 end
 
 # final γS in integration
-function γS_f_func(; μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+function γS_final(; μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
 
     αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
     Γ = Γ_func(αs=αs, order=order+1, nf=nf)

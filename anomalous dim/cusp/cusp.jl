@@ -54,3 +54,34 @@ function Γ_func(; αs::Float64, order::Int64, nf::Int64)
     return total
 
 end
+
+function Γ_final(; μ::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+
+    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
+
+    Γ1 = Γ1_func(nf)
+    Γ2 = Γ2_func(nf)
+    Γ3 = Γ3_func(nf)
+    Γ4 = Γ4_func(nf)    
+
+    order1 = αs/π * Γ1
+    order2 = (αs/π)^2 * Γ2
+    order3 = (αs/π)^3 * Γ3
+    order4 = (αs/π)^4 * Γ4
+
+    if order == 1 
+        total = order1
+    end
+    if order == 2  
+        total = order1 + order2
+    end
+    if order == 3 
+        total = order1 + order2 + order3
+    end
+    if order == 4 
+        total = order1 + order2 + order3 + order4
+    end    
+
+    return total
+
+end
