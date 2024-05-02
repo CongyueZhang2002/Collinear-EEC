@@ -188,9 +188,9 @@ function J3_func(αs,Lb,LQ,nf)
     return J3
 end
 
-function J_func(; b::Float64, μ::Float64, νdQ::Float64, αs::Float64, order::Int64, nf::Int64)
+function J_func(; b::Float64, μJ::Float64, νdQ::Float64, αs::Float64, order::Int64, nf::Int64)
 
-    Lb = log((b*μ/b0)^2)
+    Lb = log((b*μJ/b0)^2)
     LQ = log(νdQ)
 
     J1 = J1_func(αs,Lb,LQ,nf)

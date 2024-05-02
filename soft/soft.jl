@@ -184,10 +184,10 @@ function S3_func(Lb,Lr,nf)
     return S3
 end
 
-function S_func(; b::Float64, μ::Float64, ν::Float64, αs::Float64, order::Int64, nf::Int64)
+function S_func(; b::Float64, μS::Float64, νS::Float64, αs::Float64, order::Int64, nf::Int64)
 
-    Lb = log((b*μ/b0)^2)
-    Lr = log((b*ν/b0)^2)
+    Lb = log((b*μS/b0)^2)
+    Lr = log((b*νS/b0)^2)
 
     S1 = S1_func(Lb,Lr,nf)
     S2 = S2_func(Lb,Lr,nf)

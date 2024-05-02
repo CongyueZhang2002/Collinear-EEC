@@ -39,7 +39,7 @@ function γν3_func(nf)
     return γν3
 end
 
-function γν1_func(Lb,nf)
+function γν1_final(Lb,nf)
 
     γν0 = γν1_func(nf)
 
@@ -50,7 +50,7 @@ function γν1_func(Lb,nf)
     return order1
 end
 
-function γν2_func(Lb,nf)
+function γν2_final(Lb,nf)
 
     γν0 = γν1_func(nf)
     γν1 = γν2_func(nf)
@@ -69,7 +69,7 @@ function γν2_func(Lb,nf)
     return order2
 end
 
-function γν3_func(Lb,nf)
+function γν3_final(Lb,nf)
 
     γν0 = γν1_func(nf)
     γν1 = γν2_func(nf)
@@ -95,9 +95,9 @@ function γν_func(; b::Float64, μ0::Float64, αs::Float64, order::Int64, nf::I
 
     Lb = log((b*μ0/b0)^2)
 
-    γν1 = γν1_func(Lb, nf)
-    γν2 = γν2_func(Lb, nf)
-    γν3 = γν3_func(Lb, nf)  
+    γν1 = γν1_final(Lb, nf)
+    γν2 = γν2_final(Lb, nf)
+    γν3 = γν3_final(Lb, nf)  
 
     order1 = αs/(4π) * γν1
     order2 = (αs/(4π))^2 * γν2
@@ -130,7 +130,7 @@ function γν_final(; b::Float64, μ::Float64, αs_ini::Float64, μ_ini::Float64
     μ_max = [μ]
     μ_min = [μ0]
 
-    f(x) = -0.25/x[1]*Γ_final(; μ=x[1], μ_ini=μ_ini, αs_ini=αs_ini, order=order+1, nf=nf)
+    f(x) = -4/x[1]*Γ_final(; μ=x[1], μ_ini=μ_ini, αs_ini=αs_ini, order=order+1, nf=nf)
 
     integral, error = hcubature(f, μ_min, μ_max)
 

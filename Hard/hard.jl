@@ -93,9 +93,9 @@ function H3_func(L)
     return H3
 end
 
-function H_func(; μ::Float64, Q::Float64, αs::Float64, order::Int64, nf::Int64)
+function H_func(; μH::Float64, Q::Float64, αs::Float64, order::Int64)
 
-    L = log(Q^2/μ^2)
+    L = log(Q^2/μH^2)
 
     H1 = H1_func(L)
     H2 = H2_func(L)
