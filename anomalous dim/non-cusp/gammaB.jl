@@ -1,5 +1,6 @@
 # non-cusp anomalous dimension up to 3 loops from https://arxiv.org/abs/1909.00811
 
+using Distributed
 include("..\\..\\strong coupling\\constants.jl")
 include("..\\..\\strong coupling\\alpha_s.jl")
 include("..\\cusp\\cusp.jl")
@@ -7,14 +8,14 @@ include("gammaS.jl")
 
 # Beam
 
-function γB1_func(nf)
+@everywhere function γB1_func(nf)
 
     γB1 = 6CF
 
     return γB1
 end
 
-function γB2_func(nf) 
+@everywhere function γB2_func(nf) 
 
     β0 = 4*β0_func(nf) # different convention 1/4π vs 1/π
 
@@ -27,7 +28,7 @@ function γB2_func(nf)
     return γB2
 end
 
-function γB3_func(nf)
+@everywhere function γB3_func(nf)
 
     β0 = 4*β0_func(nf)
     β1 = 4^2*β1_func(nf)
@@ -44,8 +45,7 @@ function γB3_func(nf)
     return γB3
 end
 
-
-function γB_func(; αs::Float64, order::Int64, nf::Int64)
+@everywhere function γB_func(; αs::Float64, order::Int64, nf::Int64)
 
     γB1 = γB1_func(nf)
     γB2 = γB2_func(nf)
@@ -70,7 +70,7 @@ function γB_func(; αs::Float64, order::Int64, nf::Int64)
 end
 
 # final γJ in integration
-function γJ_final(; μ::Float64, νdQ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+@everywhere function γJ_final(; μ::Float64, νdQ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
 
     αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
     Γ = Γ_func(αs=αs, order=order+1, nf=nf)

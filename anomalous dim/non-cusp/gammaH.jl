@@ -1,3 +1,4 @@
+using Distributed
 include("..\\..\\strong coupling\\alpha_s.jl")
 include("..\\..\\strong coupling\\constants.jl")
 
@@ -5,7 +6,7 @@ include("gammaB.jl")
 include("gammaS.jl")
 include("..\\cusp\\cusp.jl")
 
-function γH_final(; Q::Float64, μ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+@everywhere function γH_final(; Q::Float64, μ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
 
     αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
     Γ = Γ_func(αs=αs, order=order+1, nf=nf)

@@ -1,9 +1,10 @@
 # hard function up to 3 loops from https://arxiv.org/pdf/1004.3653
 
+using Distributed
 include("..\\strong coupling\\constants.jl")
 
 # eqn 7.4
-function H1_func(L) 
+@everywhere function H1_func(L) 
 
     H1 = CF * (-L^2 + 3*L - 8 + z2)
 
@@ -11,7 +12,7 @@ function H1_func(L)
 end
 
 # eqn 7.5
-function H2_func(L)
+@everywhere function H2_func(L)
 
     H2 = (
         CF^2 * (
@@ -39,7 +40,7 @@ function H2_func(L)
 end
 
 # eqn 7.8
-function H3_func(L) 
+@everywhere function H3_func(L) 
 
     H3 = (
         CF^3 * (
@@ -93,7 +94,7 @@ function H3_func(L)
     return H3
 end
 
-function H_func(; μH::Float64, Q::Float64, αs::Float64, order::Int64)
+@everywhere function H_func(; μH::Float64, Q::Float64, αs::Float64, order::Int64)
 
     L = log(Q^2/μH^2)
 

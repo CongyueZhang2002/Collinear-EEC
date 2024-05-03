@@ -1,18 +1,24 @@
-import Pkg
-Pkg.add("HCubature")
-
+using Distributed
 using HCubature
+using SpecialFunctions
 
-# Define the function you want to integrate
-f(x) = exp(-x[1]^2)  # x[1] accesses the first element of the array x
+@everywhere include("square.jl")
 
-# Set the limits of integration as arrays
-xmin = [0]  # an array with one element for the lower bound
-xmax = [1]  # an array with one element for the upper bound
+function test(χ_list,b)
 
-# Perform the integration
-integral, error = hcubature(f, xmin, xmax)
+    if length(workers()) < 4
+    addprocs(4 - length(workers()))  
+    end
 
-println("Integral: ", integral)
-println("Estimated error: ", error)
+    b1=b
+
+    function compute_sigma_χ(χ)
+        return square(χ,b1)
+    end
+
+    results = pmap(compute_sigma_χ, χ_list)
+
+    return results
+end
+
 

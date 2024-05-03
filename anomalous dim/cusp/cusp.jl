@@ -1,24 +1,25 @@
 # cusp anomalous dimension up to 4 loops from https://arxiv.org/pdf/1911.10174.pdf
 
+using Distributed
 include("..\\..\\strong coupling\\constants.jl")
 include("..\\..\\strong coupling\\alpha_s.jl")
 
-function Γ1_func(nf)
+@everywhere function Γ1_func(nf)
     Γ1 = CF
     return Γ1
 end
 
-function Γ2_func(nf)
+@everywhere function Γ2_func(nf)
     Γ2 = CF * (1.03864*CA - 0.555556*nf*TF)
     return Γ2
 end
 
-function Γ3_func(nf)
+@everywhere function Γ3_func(nf)
     Γ3 = CF * (1.52982*CA^2 - 1.45614*CA*nf*TF + 0.0562236*CF*nf*TF - 0.0370370*nf^2*TF^2)
     return Γ3
 end
 
-function Γ4_func(nf)
+@everywhere function Γ4_func(nf)
     Γ4 = CF * (
         2.38379*CA^3 - 3.44271*CA^2*nf*TF + 0.303089*CA*CF*nf*TF - 0.242621*CF^2*nf*TF 
         + 0.911990*CA*nf^2*TF^2 - 0.333037*CF*nf^2*TF^2 + 0.0766956*nf^3*TF^3
@@ -26,7 +27,7 @@ function Γ4_func(nf)
     return Γ4
 end
 
-function Γ_func(; αs::Float64, order::Int64, nf::Int64)
+@everywhere function Γ_func(; αs::Float64, order::Int64, nf::Int64)
 
     Γ1 = Γ1_func(nf)
     Γ2 = Γ2_func(nf)
@@ -55,7 +56,7 @@ function Γ_func(; αs::Float64, order::Int64, nf::Int64)
 
 end
 
-function Γ_final(; μ::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+@everywhere function Γ_final(; μ::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
 
     αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
 

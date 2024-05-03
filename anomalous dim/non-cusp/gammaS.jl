@@ -1,19 +1,20 @@
 # non-cusp anomalous dimension up to 3 loops from https://arxiv.org/abs/1909.00811
 
+using Distributed
 include("..\\..\\strong coupling\\constants.jl")
 include("..\\..\\strong coupling\\alpha_s.jl")
 include("..\\cusp\\cusp.jl")
 
 # Soft
 
-function γS1_func(nf)
+@everywhere function γS1_func(nf)
 
     γS1 = 0
 
     return γS1
 end
 
-function γS2_func(nf) 
+@everywhere function γS2_func(nf) 
 
     β0 = 4*β0_func(nf) # different convention 1/4π vs 1/π
 
@@ -22,7 +23,7 @@ function γS2_func(nf)
     return γS2
 end
 
-function γS3_func(nf)
+@everywhere function γS3_func(nf)
 
     β0 = 4*β0_func(nf)
     β1 = 4^2*β1_func(nf)
@@ -37,7 +38,7 @@ function γS3_func(nf)
     return γS3
 end
 
-function γS_func(; αs::Float64, order::Int64, nf::Int64)
+@everywhere function γS_func(; αs::Float64, order::Int64, nf::Int64)
 
     γS1 = γS1_func(nf)
     γS2 = γS2_func(nf)
@@ -62,7 +63,7 @@ function γS_func(; αs::Float64, order::Int64, nf::Int64)
 end
 
 # final γS in integration
-function γS_final(; μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+@everywhere function γS_final(; μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
 
     αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
     Γ = Γ_func(αs=αs, order=order+1, nf=nf)

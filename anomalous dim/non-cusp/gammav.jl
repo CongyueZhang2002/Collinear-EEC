@@ -1,5 +1,6 @@
 # non-cusp anomalous dimension up to 3 loops from https://arxiv.org/abs/1909.00811
 
+using Distributed
 using HCubature
 
 include("..\\..\\strong coupling\\constants.jl")
@@ -8,14 +9,14 @@ include("..\\cusp\\cusp.jl")
 
 # rapidity ν
 
-function γν1_func(nf)
+@everywhere function γν1_func(nf)
 
     γν1 = 0
 
     return γν1
 end
 
-function γν2_func(nf) 
+@everywhere function γν2_func(nf) 
 
     β0 = 4*β0_func(nf) # different convention 1/4π vs 1/π
 
@@ -24,7 +25,7 @@ function γν2_func(nf)
     return γν2
 end
 
-function γν3_func(nf)
+@everywhere function γν3_func(nf)
 
     β0 = 4*β0_func(nf)
     β1 = 4^2*β1_func(nf)
@@ -39,7 +40,7 @@ function γν3_func(nf)
     return γν3
 end
 
-function γν1_final(Lb,nf)
+@everywhere function γν1_final(Lb,nf)
 
     γν0 = γν1_func(nf)
 
@@ -50,7 +51,7 @@ function γν1_final(Lb,nf)
     return order1
 end
 
-function γν2_final(Lb,nf)
+@everywhere function γν2_final(Lb,nf)
 
     γν0 = γν1_func(nf)
     γν1 = γν2_func(nf)
@@ -69,7 +70,7 @@ function γν2_final(Lb,nf)
     return order2
 end
 
-function γν3_final(Lb,nf)
+@everywhere function γν3_final(Lb,nf)
 
     γν0 = γν1_func(nf)
     γν1 = γν2_func(nf)
@@ -91,7 +92,7 @@ function γν3_final(Lb,nf)
     return order3
 end
 
-function γν_func(; b::Float64, μ0::Float64, αs::Float64, order::Int64, nf::Int64)
+@everywhere function γν_func(; b::Float64, μ0::Float64, αs::Float64, order::Int64, nf::Int64)
 
     Lb = log((b*μ0/b0)^2)
 
@@ -117,7 +118,7 @@ function γν_func(; b::Float64, μ0::Float64, αs::Float64, order::Int64, nf::I
 
 end
 
-function γν_final(; b::Float64, μ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64, bmax::Float64)
+@everywhere function γν_final(; b::Float64, μ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64, bmax::Float64)
 
     bstar = b/(1+(b/bmax)^2)^0.5
 

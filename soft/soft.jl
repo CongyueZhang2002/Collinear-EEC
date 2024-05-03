@@ -1,5 +1,6 @@
 # TMD soft function up to 3 loops from https://arxiv.org/pdf/1604.01404 
 
+using Distributed
 include("..\\strong coupling\\constants.jl")
 include("..\\strong coupling\\alpha_s.jl")
 include("..\\anomalous dim\\cusp\\cusp.jl")
@@ -9,12 +10,12 @@ include("..\\anomalous dim\\cusp\\cusp.jl")
 # Γ0 = 4β0, β1 = 4^2*β1
 
 # constants
-function cT1_func(nf)
+@everywhere function cT1_func(nf)
     cT1 = -2*CF*z2
     return cT1
 end
 
-function cT2_func(nf)
+@everywhere function cT2_func(nf)
     cT2 = (
         CA*CF*(-67*z2/3 - 154*z3/9 + 10*z4 + 2428/81)
         + CF*nf*(10*z2/3 + 28*z3/9 - 328/81)
@@ -22,7 +23,7 @@ function cT2_func(nf)
     return cT2
 end
 
-function cT3_func(nf)
+@everywhere function cT3_func(nf)
     cT3 = (
         CF*CA^2 * (928/9*z3^2 + 1100/9*z2*z3 - 151132/243*z3 - 297481/729*z2 + 3649/27*z4 + 1804/9*z5 - 3086/27*z6 + 5211949/13122) 
         + CF*CA*nf * (40/9*z3*z2 + 74530/729*z2 + 8152/81*z3 - 416/27*z4 - 184/3*z5 - 412765/6561) 
@@ -32,12 +33,12 @@ function cT3_func(nf)
     return cT3
 end
 
-function cs1_func(nf)
+@everywhere function cs1_func(nf)
     cs1 = 2*CF*z2
     return cs1
 end
 
-function cs2_func(nf)
+@everywhere function cs2_func(nf)
     cs2 = (
         CA*CF*(67*z2/9 - 22*z3/9 - 30*z4 + 2428/81)
         + CF*nf*(-10*z2/9 + 4*z3/9 - 328/81)
@@ -46,14 +47,14 @@ function cs2_func(nf)
 end
 
 # threshold soft anomalous dimensions
-function γs0_thre_func(nf)
+@everywhere function γs0_thre_func(nf)
 
     γs0 = 0
 
     return γs0
 end
 
-function γs1_thre_func(nf)
+@everywhere function γs1_thre_func(nf)
 
     γs1 = (
           CA*CF * (22/3*z2 + 28*z3 - 808/27) 
@@ -63,7 +64,7 @@ function γs1_thre_func(nf)
     return γs1
 end
 
-function γs2_thre_func(nf)
+@everywhere function γs2_thre_func(nf)
 
     γs2 = (
           CA^2*CF * (-176/3*z3*z2 + 12650/81*z2 + 1316/3*z3 - 176*z4 - 192*z5 - 136781/729) 
@@ -76,7 +77,7 @@ function γs2_thre_func(nf)
 end
 
 # rapidity anomalous dimensions
-function γr0_func(nf)
+@everywhere function γr0_func(nf)
 
     γs0 = γs0_thre_func(nf)
 
@@ -85,7 +86,7 @@ function γr0_func(nf)
     return γr0
 end
 
-function γr1_func(nf)
+@everywhere function γr1_func(nf)
 
     cs1 = cs1_func(nf)
 
@@ -98,7 +99,7 @@ function γr1_func(nf)
     return γr1
 end
 
-function γr2_func(nf)
+@everywhere function γr2_func(nf)
 
     cs1 = cs1_func(nf)
     cs2 = cs2_func(nf)
@@ -114,7 +115,7 @@ function γr2_func(nf)
 end
 
 # Soft function (eqn 9S)
-function S1_func(Lb,Lr,nf)
+@everywhere function S1_func(Lb,Lr,nf)
 
     cT1 = cT1_func(nf)
 
@@ -128,7 +129,7 @@ function S1_func(Lb,Lr,nf)
     return S1
 end
 
-function S2_func(Lb,Lr,nf)
+@everywhere function S2_func(Lb,Lr,nf)
 
     cT1 = cT1_func(nf)
     cT2 = cT2_func(nf)
@@ -153,7 +154,7 @@ function S2_func(Lb,Lr,nf)
     return S2
 end
 
-function S3_func(Lb,Lr,nf)
+@everywhere function S3_func(Lb,Lr,nf)
 
     cT1 = cT1_func(nf)
     cT2 = cT2_func(nf)
@@ -184,7 +185,7 @@ function S3_func(Lb,Lr,nf)
     return S3
 end
 
-function S_func(; b::Float64, μS::Float64, νS::Float64, αs::Float64, order::Int64, nf::Int64)
+@everywhere function S_func(; b::Float64, μS::Float64, νS::Float64, αs::Float64, order::Int64, nf::Int64)
 
     Lb = log((b*μS/b0)^2)
     Lr = log((b*νS/b0)^2)

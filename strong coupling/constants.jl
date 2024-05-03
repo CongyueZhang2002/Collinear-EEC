@@ -1,3 +1,6 @@
+using Distributed
+
+@everywhere begin
 # Color Factors
 CA = 3
 CF = 4/3
@@ -19,3 +22,4 @@ z6 = 1.01734
 
 #
 b0 = 1.12292
+end

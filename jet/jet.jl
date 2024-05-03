@@ -1,10 +1,11 @@
 # jet up to 3 loops from https://arxiv.org/abs/2012.07859
 
+using Distributed
 include("..\\strong coupling\\constants.jl")
 
 # jet function
 
-function J1_func(αs,Lb,LQ,nf)
+@everywhere function J1_func(αs,Lb,LQ,nf)
 
     J1 = (
         1 + (CF*αs)/π + (3*CF*Lb*αs)/(4*π) + 
@@ -14,7 +15,7 @@ function J1_func(αs,Lb,LQ,nf)
     return J1
 end
 
-function J2_func(αs,Lb,LQ,nf)
+@everywhere function J2_func(αs,Lb,LQ,nf)
 
     J2 = (
         - (89*CA*CF*αs^2)/144 - (7*CF^2*αs^2)/24 - 
@@ -39,7 +40,7 @@ function J2_func(αs,Lb,LQ,nf)
     return J2
 end
 
-function J3_func(αs,Lb,LQ,nf)
+@everywhere function J3_func(αs,Lb,LQ,nf)
 
     J3 = (
         (173785*CA^2*CF*αs^3)/(124416*π^3) + (24673*CA*CF^2*αs^3)/(13824*π^3) + 
@@ -188,7 +189,7 @@ function J3_func(αs,Lb,LQ,nf)
     return J3
 end
 
-function J_func(; b::Float64, μJ::Float64, νdQ::Float64, αs::Float64, order::Int64, nf::Int64)
+@everywhere function J_func(; b::Float64, μJ::Float64, νdQ::Float64, αs::Float64, order::Int64, nf::Int64)
 
     Lb = log((b*μJ/b0)^2)
     LQ = log(νdQ)
