@@ -8,32 +8,32 @@ include("gammaS.jl")
 
 # Beam
 
-@everywhere function γB1_func(nf)
+@everywhere function γB0_func(nf)
 
-    γB1 = 6CF
+    γB0 = 6CF
 
-    return γB1
+    return γB0
 end
 
-@everywhere function γB2_func(nf) 
+@everywhere function γB1_func(nf) 
 
-    β0 = 4*β0_func(nf) # different convention 1/4π vs 1/π
+    β0 = β0_func(nf) # different convention 1/4π vs 1/π
 
-    γB2 = 2CF * (
+    γB1 = 2CF * (
           CA * (73/9 - 40z3) 
         + CF * (3/2 - 12z2 + 24z3) 
         + β0 * (121/18 + 2z2)
     )
 
-    return γB2
+    return γB1
 end
 
-@everywhere function γB3_func(nf)
+@everywhere function γB2_func(nf)
 
-    β0 = 4*β0_func(nf)
-    β1 = 4^2*β1_func(nf)
+    β0 = β0_func(nf)
+    β1 = β1_func(nf)
 
-    γB3 = 2CF * (
+    γB2 = 2CF * (
           CA^2 * (52019/162 - 1682/27*z2 - 2056/9*z3 - 820/3*z4 + 176/3*z2*z3 + 232z5) 
         + CA*CF * (151/4 - 410/3*z2 + 844/3*z3 - 494/3*z4 + 16*z2*z3 + 120z5) 
         + CF^2 * (29/2 + 18z2 + 68z3 + 144z4 - 32z2*z3 - 240z5) 
@@ -42,18 +42,18 @@ end
         + β1 * (1166/27 - 16/3*z2 + 52/9*z3 - 82/3*z4)
     )
 
-    return γB3
+    return γB2
 end
 
 @everywhere function γB_func(; αs::Float64, order::Int64, nf::Int64)
 
+    γB0 = γB0_func(nf)    
     γB1 = γB1_func(nf)
-    γB2 = γB2_func(nf)
-    γB3 = γB3_func(nf)  
+    γB2 = γB2_func(nf) 
 
-    order1 = αs/(4π) * γB1
-    order2 = (αs/(4π))^2 * γB2
-    order3 = (αs/(4π))^3 * γB3
+    order1 = αs/(4π) * γB0
+    order2 = (αs/(4π))^2 * γB1
+    order3 = (αs/(4π))^3 * γB2
 
     if order == 1 
         total = order1

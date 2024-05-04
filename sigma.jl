@@ -45,7 +45,7 @@ using SpecialFunctions
         μJ_ratio::Float64, νJ_ratio::Float64, 
         μS_ratio::Float64, νS_ratio::Float64, bmax_ratio::Float64)
 
-        if b < 1.0e-7
+        if b < 1.0e-9
             return 0.0
         end
 

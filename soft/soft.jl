@@ -5,10 +5,6 @@ include("..\\strong coupling\\constants.jl")
 include("..\\strong coupling\\alpha_s.jl")
 include("..\\anomalous dim\\cusp\\cusp.jl")
 
-# Again convetion difference:
-# Γ0 = 4Γ1, Γ1 = 4^2*Γ2, Γ2 = 4^3*Γ3
-# Γ0 = 4β0, β1 = 4^2*β1
-
 # constants
 @everywhere function cT1_func(nf)
     cT1 = -2*CF*z2
@@ -90,7 +86,7 @@ end
 
     cs1 = cs1_func(nf)
 
-    β0 = 4*β0_func(nf) 
+    β0 = β0_func(nf) 
 
     γs1 = γs1_thre_func(nf)
     
@@ -104,8 +100,8 @@ end
     cs1 = cs1_func(nf)
     cs2 = cs2_func(nf)
 
-    β0 = 4*β0_func(nf) 
-    β1 = 4^2*β1_func(nf) 
+    β0 = β0_func(nf) 
+    β1 = β1_func(nf) 
 
     γs2 = γs2_thre_func(nf)
 
@@ -119,7 +115,7 @@ end
 
     cT1 = cT1_func(nf)
 
-    Γ0 = 4*Γ1_func(nf)
+    Γ0 = Γ0_func(nf)
 
     γs0 = γs0_thre_func(nf)
     γr0 = γr0_func(nf)
@@ -134,9 +130,9 @@ end
     cT1 = cT1_func(nf)
     cT2 = cT2_func(nf)
 
-    β0 = 4*β0_func(nf)  
-    Γ0 = 4*Γ1_func(nf)
-    Γ1 = 4^2*Γ2_func(nf)
+    β0 = β0_func(nf)  
+    Γ0 = Γ0_func(nf)
+    Γ1 = Γ1_func(nf)
 
     γs0 = γs0_thre_func(nf)
     γs1 = γs1_thre_func(nf)
@@ -160,11 +156,11 @@ end
     cT2 = cT2_func(nf)
     cT3 = cT3_func(nf)
 
-    β0 = 4*β0_func(nf)
-    β1 = 4^2*β1_func(nf)   
-    Γ0 = 4*Γ1_func(nf)
-    Γ1 = 4^2*Γ2_func(nf)
-    Γ2 = 4^3*Γ3_func(nf)  
+    β0 = β0_func(nf)
+    β1 = β1_func(nf)   
+    Γ0 = Γ0_func(nf)
+    Γ1 = Γ1_func(nf)
+    Γ2 = Γ2_func(nf)  
 
     γs0 = γs0_thre_func(nf)
     γs1 = γs1_thre_func(nf)

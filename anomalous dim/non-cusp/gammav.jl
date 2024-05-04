@@ -9,57 +9,57 @@ include("..\\cusp\\cusp.jl")
 
 # rapidity ν
 
-@everywhere function γν1_func(nf)
+@everywhere function γν0_func(nf)
 
-    γν1 = 0
+    γν0 = 0
+
+    return γν0
+end
+
+@everywhere function γν1_func(nf) 
+
+    β0 = β0_func(nf) # different convention 1/4π vs 1/π
+
+    γν1 = 2CF * (CA*(-64/9 + 28z3) - β0*56/9)
 
     return γν1
 end
 
-@everywhere function γν2_func(nf) 
+@everywhere function γν2_func(nf)
 
-    β0 = 4*β0_func(nf) # different convention 1/4π vs 1/π
+    β0 = β0_func(nf)
+    β1 = β1_func(nf)
 
-    γν2 = 2CF * (CA*(-64/9 + 28z3) - β0*56/9)
-
-    return γν2
-end
-
-@everywhere function γν3_func(nf)
-
-    β0 = 4*β0_func(nf)
-    β1 = 4^2*β1_func(nf)
-
-    γν3 = 2CF * (
+    γν2 = 2CF * (
         + CA^2 * (-37871/162 + 620/27*z2 + 2548/9*z3 + 144z4 - 176/3*z2*z3 - 192z5) 
         + CA*β0 * (3865/54 + 412/27*z2 + 220/9*z3 - 50z4) 
         + β0^2 * (-464/81 - 8z3) 
         + β1 * (-1711/54 + 152/9*z3 + 8z4)
     )
 
-    return γν3
+    return γν2
 end
 
-@everywhere function γν1_final(Lb,nf)
+@everywhere function γν0_final(Lb,nf)
 
-    γν0 = γν1_func(nf)
+    γν0 = γν0_func(nf)
 
-    Γ0 = 4*Γ1_func(nf)
+    Γ0 = Γ0_func(nf)
 
     order1 = -2*Lb*Γ0 + γν0
 
     return order1
 end
 
-@everywhere function γν2_final(Lb,nf)
+@everywhere function γν1_final(Lb,nf)
 
-    γν0 = γν1_func(nf)
-    γν1 = γν2_func(nf)
+    γν0 = γν0_func(nf)
+    γν1 = γν1_func(nf)
 
-    β0 = 4*β0_func(nf)
+    β0 = β0_func(nf)
 
-    Γ0 = 4*Γ1_func(nf)
-    Γ1 = 4^2*Γ2_func(nf)
+    Γ0 = Γ0_func(nf)
+    Γ1 = Γ1_func(nf)
 
     order2 = (
         - Lb^2*Γ0*β0 
@@ -70,18 +70,18 @@ end
     return order2
 end
 
-@everywhere function γν3_final(Lb,nf)
+@everywhere function γν2_final(Lb,nf)
 
-    γν0 = γν1_func(nf)
-    γν1 = γν2_func(nf)
-    γν2 = γν3_func(nf)
+    γν0 = γν0_func(nf)
+    γν1 = γν1_func(nf)
+    γν2 = γν2_func(nf)
 
-    β0 = 4*β0_func(nf)
-    β1 = 4^2*β1_func(nf)    
+    β0 = β0_func(nf)
+    β1 = β1_func(nf)    
 
-    Γ0 = 4*Γ1_func(nf)
-    Γ1 = 4^2*Γ2_func(nf)
-    Γ2 = 4^3*Γ3_func(nf)
+    Γ0 = Γ0_func(nf)
+    Γ1 = Γ1_func(nf)
+    Γ2 = Γ2_func(nf)
 
     order3 = (
         - 2/3*Lb^3 * Γ0*β0^2 
@@ -96,13 +96,13 @@ end
 
     Lb = log((b*μ0/b0)^2)
 
+    γν0 = γν0_final(Lb, nf)
     γν1 = γν1_final(Lb, nf)
     γν2 = γν2_final(Lb, nf)
-    γν3 = γν3_final(Lb, nf)  
 
-    order1 = αs/(4π) * γν1
-    order2 = (αs/(4π))^2 * γν2
-    order3 = (αs/(4π))^3 * γν3
+    order1 = αs/(4π) * γν0
+    order2 = (αs/(4π))^2 * γν1
+    order3 = (αs/(4π))^3 * γν2
 
     if order == 1 
         total = order1

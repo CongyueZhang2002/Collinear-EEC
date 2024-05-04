@@ -11,12 +11,12 @@ include("constants.jl")
 
 @everywhere function β0_func(nf) 
     value = (11*CA - 2*nf)/12
-    return value
+    return 4*value
 end
 
 @everywhere function β1_func(nf) 
     value = (17*CA^2 - 5*CA*nf - 3*CF*nf)/24
-    return value
+    return 4^2*value
 end
 
 @everywhere function β2_func(nf)
@@ -25,7 +25,7 @@ end
     - (1415/54*CA^2 + 205/18*CA*CF - CF^2)*nf 
     + (79/54*CA + 11/9*CF)*nf^2
     )/64
-    return value
+    return 4^3*value
 end
 
 @everywhere function β3_func(nf)
@@ -35,7 +35,7 @@ end
     + (- 1627*z3/1728 - 1078361/41472)*nf
     + 891/64*z3 + 149753/1536
     )
-    return value
+    return 4^4*value
 end
 
 @everywhere function alpha_s_func(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
@@ -45,14 +45,14 @@ end
     β2 = β2_func(nf)
     β3 = β3_func(nf)
 
-    l = 1 + β0*αs*log(μf^2/μi^2)/π
+    l = 1 + β0*αs*log(μf^2/μi^2)/(4*π)
 
     order1 = 1 
-    order2 = - αs/(π*l)*β1/β0*log(l)
-    order3 = (αs/(π*l))^2 * (
+    order2 = - αs/(4π*l)*β1/β0*log(l)
+    order3 = (αs/(4π*l))^2 * (
         (β1/β0)^2 * (log(l)^2 - log(l) + l - 1) - β2/β0 * (l - 1)
     )
-    order4 = (αs/(π*l))^3 * (
+    order4 = (αs/(4π*l))^3 * (
         (β1/β0)^3 * (-log(l)^3 + 5/2*log(l)^2 - 2*(l - 1)*log(l) - (l-1)^2/2)
         + β1*β2/β0^2 * ((l - 1)*l + (2*l - 3)*log(l))
         + β3/β0 * (1 - l^2)/2
