@@ -118,7 +118,7 @@ end
 
 end
 
-@everywhere function γν_final(; b::Float64, μ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64, bmax::Float64)
+@everywhere function γν_final(; b::Float64, μB::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64, bmax::Float64)
 
     bstar = b/(1+(b/bmax)^2)^0.5
 
@@ -128,7 +128,7 @@ end
 
     γν_FO = γν_func(b=b, μ0=μ0, αs=αs_μ0, order=order, nf=nf)
 
-    μ_max = [μ]
+    μ_max = [μB]
     μ_min = [μ0]
 
     f(x) = -4/x[1]*Γ_final(; μ=x[1], μ_ini=μ_ini, αs_ini=αs_ini, order=order+1, nf=nf)
