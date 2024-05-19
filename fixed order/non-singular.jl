@@ -7,7 +7,6 @@ function non_singular_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::F
     SCET = SCET_func(z=z, Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf)
 
     non_singular = perturbation - SCET
-    #non_singular = -2/(3z^5)*(z^4 + z^3 - 3z^2 + 15z - 9)*log(1-z) - (z^3+z^2+7z-6)/z^4
 
     return non_singular
 end
@@ -22,3 +21,4 @@ function non_singular_sigma_χ(; χ::Float64, Q::Float64, μ_ini::Float64, αs_i
 
     return total
 end
+

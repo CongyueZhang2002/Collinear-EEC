@@ -68,7 +68,7 @@ function β_func(; αs::Float64, order::Int64, nf::Int64)
 
 end
 
-@everywhere function alpha_s_func_N3LL(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
+@everywhere function alpha_s_func(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
 
     β0 = β0_func(nf)
     β1 = β1_func(nf)
@@ -107,7 +107,7 @@ end
 
 end
 
-function alpha_s_func(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
+function alpha_s_func_schwartz(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
 
     β0 = β0_func(nf)
     β1 = β1_func(nf)

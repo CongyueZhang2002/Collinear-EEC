@@ -4,7 +4,7 @@ using Distributed
 include("..\\strong coupling\\constants.jl")
 
 # eqn 7.4
-@everywhere function H1_func(L) 
+@everywhere function H1_func(L,nf) 
 
     H1 = CF * (-L^2 + 3*L - 8 + z2)
 
@@ -12,7 +12,7 @@ include("..\\strong coupling\\constants.jl")
 end
 
 # eqn 7.5
-@everywhere function H2_func(L)
+@everywhere function H2_func(L,nf)
 
     H2 = (
         CF^2 * (
@@ -28,7 +28,7 @@ end
             + (2545/54 - 26*z3 + (22/3)*z2)*L 
             - 51157/648 + (313/9)*z3 - (337/18)*z2 + (44/5)*z2^2
         ) 
-        + CF*NF * (
+        + CF*nf * (
               (-2/9)*L^3 
             + (19/9)*L^2 
             + (-209/27 - (4/3)*z2)*L 
@@ -40,7 +40,7 @@ end
 end
 
 # eqn 7.8
-@everywhere function H3_func(L) 
+@everywhere function H3_func(L,nf) 
 
     H3 = (
         CF^3 * (
@@ -60,7 +60,7 @@ end
             + (-13805/24 + 120*z5 + 2441/3*z3 - 11260/27*z2 - 10*z3*z2 + 162/5*z2^2)*L 
             + 415025/648 - 2756/9*z5 - 18770/27*z3 + 296/3*z3^2 + 538835/648*z2 - 3751/9*z2*z3 - 4943/270*z2^2 - 12676/315*z2^3
         )
-        + CF^2*NF * (
+        + CF^2*nf * (
             (2/9)*L^5 
             - (25/9)*L^4 
             + (410/27 + 10/9*z2)*L^3 
@@ -75,14 +75,14 @@ end
             + (1045955/1458 + 136*z5 - 17464/27*z3 + 17366/81*z2 + 88/3*z2*z3 - 94/3*z2^2)*L 
             - 51082685/52488 - 434/9*z5 + 505087/486*z3 - 1136/9*z3^2 - 412315/729*z2 + 416/3*z2*z3 + 22157/270*z2^2 - 6152/189*z2^3
         ) 
-        + CF*CA*NF * (
+        + CF*CA*nf * (
               22/27*L^4 
             + (-974/81 + 8/9*z2)*L^3 
             + (5876/81 - 8*z3 + 16/3*z2)*L^2 
             + (-154919/729 + 724/9*z3 - 5864/81*z2 + 44/15*z2^2)*L
             + 1700171/6561 - 4/3*z5 - 4288/27*z3 + 115555/729*z2 + 4/3*z2*z3 + 2/27*z2^2
         )
-        + CF*NF^2 * (
+        + CF*nf^2 * (
             - 2/27*L^4 
             + 76/81*L^3 
             + (-406/81 - 8/9*z2)*L^2 
@@ -94,13 +94,13 @@ end
     return H3
 end
 
-@everywhere function H_func(; μH::Float64, Q::Float64, αs::Float64, order::Int64)
+@everywhere function H_func(; μH::Float64, Q::Float64, αs::Float64, order::Int64, nf::Int64)
 
     L = log(Q^2/μH^2)
 
-    H1 = H1_func(L)
-    H2 = H2_func(L)
-    H3 = H3_func(L)
+    H1 = H1_func(L,nf)
+    H2 = H2_func(L,nf)
+    H3 = H3_func(L,nf)
 
     if order == 1 
         total = 1 + (αs/4π)*H1

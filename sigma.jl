@@ -27,6 +27,18 @@ using SpecialFunctions
         return integral
     end
 
+    function Integral_H_analytic(; Q::Float64, μB::Float64, μH::Float64, 
+                        αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+
+        αs_H = alpha_s_func(μf=μH, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+        αs_B = alpha_s_func(μf=μB, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+
+        f(x)=1/(β_func(αs=x[1], order=order, nf=nf))*γH_analytic(Q=Q, αs_μ=x[1], αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+        integral, error = hcubature(f, [αs_H], [αs_B])
+
+        return integral
+    end
+
     #function Integral_J(; Q::Float64, νJ::Float64, μ::Float64, μJ::Float64, 
     #                    αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
     #
@@ -41,6 +53,17 @@ using SpecialFunctions
 
         f(x)=1/x[1]*γS_final(μ=x[1], ν=νS, αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
         integral, error = hcubature(f, [μS], [μB])
+        return integral
+    end
+
+    function Integral_S_analytic(; νS::Float64, μB::Float64, μS::Float64, 
+                        αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+
+        αs_S = alpha_s_func(μf=μS, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+        αs_B = alpha_s_func(μf=μB, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+
+        f(x)=1/(β_func(αs=x[1], order=order, nf=nf))*γS_analytic(αs_μ=x[1], ν=νS, αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+        integral, error = hcubature(f, [αs_S], [αs_B])
         return integral
     end
 
@@ -65,17 +88,17 @@ using SpecialFunctions
 
         αs_J = alpha_s_func(μf=μJ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
         αs_S = alpha_s_func(μf=μS, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-
+ 
         J = J_func(b=b, μJ=μJ, νdQ=νJ/Q, αs=αs_J, order=order, nf=nf)
         S = S_func(b=b, μS=μS, νS=νS, αs=αs_S, order=order, nf=nf)
 
-        γH_Integral = Integral_H(Q=Q, μB=μJ, μH=μH, 
+        γH_Integral = Integral_H_analytic(Q=Q, μB=μJ, μH=μH, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
 
-        γS_Integral = Integral_S(νS=νS, μB=μJ, μS=μS, 
+        γS_Integral = Integral_S_analytic(νS=νS, μB=μJ, μS=μS, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
 
-        γν_Integral = γν_final(b=b, μB=μJ, 
+        γν_Integral = γν_analytic(b=b, μB=μJ, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf, bmax=bmax)
 
         total = Q^2/4*b*J0*J*J*S*exp(γH_Integral+γS_Integral)*(νJ/νS)^γν_Integral
@@ -87,7 +110,7 @@ using SpecialFunctions
         
         μH = μH_ratio * Q
         αs_H = alpha_s_func(μf=μH, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-        H = H_func(μH=μH, Q=Q, αs=αs_H, order=order)
+        H = H_func(μH=μH, Q=Q, αs=αs_H, order=order, nf=nf)
 
         return H
     end
