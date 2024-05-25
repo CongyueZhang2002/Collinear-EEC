@@ -70,13 +70,13 @@ end
 end
 
 # final γJ in integration
-@everywhere function γJ_final(; μ::Float64, νdQ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
-
-    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-    Γ = Γ_func(αs=αs, order=order+1, nf=nf)
-    γJ = γB_func(αs=αs, order=order, nf=nf) + γS_func(αs=αs, order=order, nf=nf)
-
-    γJ_f = 2*Γ*log(νdQ) + γJ
-
-    return γJ_f
-end
+#@everywhere function γJ_final(; μ::Float64, νdQ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+#
+#    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+#    Γ = Γ_func(αs=αs, order=order+1, nf=nf)
+#    γJ = γB_func(αs=αs, order=order, nf=nf) + γS_func(αs=αs, order=order, nf=nf)
+#
+#    γJ_f = 2*Γ*log(νdQ) + γJ
+#
+#    return γJ_f
+#end

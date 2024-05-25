@@ -14,28 +14,19 @@ using SpecialFunctions
     include("anomalous dim\\non-cusp\\gammaB.jl")
     include("anomalous dim\\non-cusp\\gammaS.jl")
     include("anomalous dim\\non-cusp\\gammav.jl")
+    include("anomalous dim\\non-cusp\\Integration.jl")    
     include("hard\\hard.jl")
     include("jet\\jet.jl")
     include("soft\\soft.jl")
 
+#NUMERICAL
+
     function Integral_H(; Q::Float64, μB::Float64, μH::Float64, 
                         αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
-
+    
         f(x)=1/x[1]*γH_final(Q=Q, μ=x[1], αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
         integral, error = hcubature(f, [μH], [μB])
-
-        return integral
-    end
-
-    function Integral_H_analytic(; Q::Float64, μB::Float64, μH::Float64, 
-                        αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
-
-        αs_H = alpha_s_func(μf=μH, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-        αs_B = alpha_s_func(μf=μB, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-
-        f(x)=1/(β_func(αs=x[1], order=order, nf=nf))*γH_analytic(Q=Q, αs_μ=x[1], αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
-        integral, error = hcubature(f, [αs_H], [αs_B])
-
+    
         return integral
     end
 
@@ -50,21 +41,109 @@ using SpecialFunctions
 
     function Integral_S(; νS::Float64, μB::Float64, μS::Float64, 
                         αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
-
+    
         f(x)=1/x[1]*γS_final(μ=x[1], ν=νS, αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
-        integral, error = hcubature(f, [μS], [μB])
+       integral, error = hcubature(f, [μS], [μB])
         return integral
     end
 
-    function Integral_S_analytic(; νS::Float64, μB::Float64, μS::Float64, 
-                        αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+#SUBSTITUION
 
-        αs_S = alpha_s_func(μf=μS, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-        αs_B = alpha_s_func(μf=μB, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+    #function Integral_H_semi; Q::Float64, μB::Float64, μH::Float64, 
+    #                    αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+    #
+    #    αs_H = alpha_s_func(μf=μH, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+    #    αs_B = alpha_s_func(μf=μB, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+    #
+    #    f(x)=1/(β_func(αs=x[1], order=order, nf=nf))*γH_analytic(Q=Q, αs_μ=x[1], αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+    #    integral, error = hcubature(f, [αs_H], [αs_B])
+    #
+    #    return integral
+    #end
 
-        f(x)=1/(β_func(αs=x[1], order=order, nf=nf))*γS_analytic(αs_μ=x[1], ν=νS, αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
-        integral, error = hcubature(f, [αs_S], [αs_B])
-        return integral
+    #function Integral_S_semi(; νS::Float64, μB::Float64, μS::Float64, 
+    #                    αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+    #
+    #    αs_S = alpha_s_func(μf=μS, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+    #    αs_B = alpha_s_func(μf=μB, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+    #
+    #    f(x)=1/(β_func(αs=x[1], order=order, nf=nf))*γS_analytic(αs_μ=x[1], ν=νS, αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+    #    integral, error = hcubature(f, [αs_S], [αs_B])
+    #    return integral
+    #end
+
+#ANALYTICAL
+
+    function Integral_H_analytic(; Q::Float64, μf::Float64, μH::Float64, 
+                                   αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+    
+        γS0 = γS0_func(nf) 
+        γS1 = γS1_func(nf)
+        γS2 = γS2_func(nf)
+        γS3 = 0.0
+
+        γB0 = γB0_func(nf) 
+        γB1 = γB1_func(nf)
+        γB2 = γB2_func(nf)
+        γB3 = 0.0
+
+        γS0_tilde = - γS0
+        γS1_tilde = - γS1
+        γS2_tilde = - γS2
+        γS3_tilde = 0.0
+
+        γB0_tilde = γB0 + γS0
+        γB1_tilde = γB1 + γS1
+        γB2_tilde = γB2 + γS2
+        γB3_tilde = 0.0
+
+        γH0_4tilde = -2*γB0_tilde - γS0_tilde
+        γH1_4tilde = -2*γB1_tilde - γS1_tilde
+        γH2_4tilde = -2*γB2_tilde - γS2_tilde
+        γH3_4tilde = -2*γB3_tilde - γS3_tilde
+
+        total = (
+            - 4*KΓ_integral(; μi=μH, μf=μf, scale=Q, αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+            + η_integral(; μi=μH, μf=μf, 
+                        F0=γH0_4tilde, F1=γH1_4tilde, F2=γH2_4tilde, F3=γH3_4tilde,
+                        αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+        )
+    
+        return total
+    end
+
+    function Integral_J_analytic(; νB::Float64, μB::Float64, μf::Float64, Q::Float64,
+                                   αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+        Γ0 = Γ0_func(nf)
+        Γ1 = Γ1_func(nf)
+        Γ2 = Γ2_func(nf)
+        Γ3 = Γ3_func(nf)  
+          
+        γS0 = γS0_func(nf) 
+        γS1 = γS1_func(nf)
+        γS2 = γS2_func(nf)
+        γS3 = 0.0
+
+        γB0 = γB0_func(nf) 
+        γB1 = γB1_func(nf)
+        γB2 = γB2_func(nf)
+        γB3 = 0.0
+
+        γB0_tilde = γB0 + γS0   
+        γB1_tilde = γB1 + γS1
+        γB2_tilde = γB2 + γS2
+        γB3_tilde = 0.0
+
+        total = (
+          η_integral(; μi=μB, μf=μf, 
+                F0=Γ0, F1=Γ1, F2=Γ2, F3=Γ3,
+                αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf) * 2*log(νB/Q)
+        + η_integral(; μi=μB, μf=μf, 
+                F0=γB0_tilde, F1=γB1_tilde, F2=γB2_tilde, F3=γB3_tilde,
+                αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+        )
+
+        return total
     end
 
     function Integrand(;b::Float64, Q::Float64, z::Float64, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
@@ -84,7 +163,9 @@ using SpecialFunctions
         νJ = νJ_ratio * Q
         μS = μS_ratio * b0/bstar
         νS = νS_ratio * b0/b
-        μH = μH_ratio * Q    
+        μH = μH_ratio * Q
+        
+        μf = μS
 
         αs_J = alpha_s_func(μf=μJ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
         αs_S = alpha_s_func(μf=μS, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
@@ -92,16 +173,19 @@ using SpecialFunctions
         J = J_func(b=b, μJ=μJ, νdQ=νJ/Q, αs=αs_J, order=order, nf=nf)
         S = S_func(b=b, μS=μS, νS=νS, αs=αs_S, order=order, nf=nf)
 
-        γH_Integral = Integral_H_analytic(Q=Q, μB=μJ, μH=μH, 
+        γH_Integral = Integral_H_analytic(Q=Q, μf=μf, μH=μH, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
 
-        γS_Integral = Integral_S_analytic(νS=νS, μB=μJ, μS=μS, 
+        γJ_Integral = Integral_J_analytic(νB=νJ, μB=μJ, μf=μf, Q=Q,
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+        
+        #γS_Integral = Integral_S(νS=νS, μB=μJ, μS=μS, 
+        #                        αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
 
-        γν_Integral = γν_analytic(b=b, μB=μJ, 
+        γν_Integral = γν_analytic(b=b, μf=μf, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf, bmax=bmax)
 
-        total = Q^2/4*b*J0*J*J*S*exp(γH_Integral+γS_Integral)*(νJ/νS)^γν_Integral
+        total = Q^2/4*b*J0*J*J*S*exp(γH_Integral+2*γJ_Integral)*(νJ/νS)^γν_Integral
 
         return total
     end
@@ -123,7 +207,7 @@ using SpecialFunctions
                         μJ_ratio=μJ_ratio, νJ_ratio=νJ_ratio, μS_ratio=μS_ratio, 
                         νS_ratio=νS_ratio, μH_ratio=μH_ratio, bmax_ratio=bmax_ratio)
 
-        integral, error = hcubature(f, [0.0], [10.0])
+        integral, error = hcubature(f, [0.0], [100.0])
         
         hard = Hard_Part(Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, μH_ratio=μH_ratio, order=order)
 
@@ -149,6 +233,7 @@ using SpecialFunctions
 
 end
 
+#PARALELL
 function sigma_fast(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
     μH_ratio::Float64=1.0, μJ_ratio::Float64=1.0, νJ_ratio::Float64=1.0, 
     μS_ratio::Float64=1.0, νS_ratio::Float64=1.0, bmax_ratio::Float64=1.0)
@@ -180,7 +265,7 @@ function sigma_fast(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs
     end
 end
 
-# For checking dσ/dz=∱db (integrated)
+#CHECK INTEGRAND
 function integrated(; Q::Float64, b::Float64, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
     μH_ratio::Float64 = 1.0, μJ_ratio::Float64 = 1.0, νJ_ratio::Float64 = 1.0, 
     μS_ratio::Float64 = 1.0, νS_ratio::Float64 = 1.0, bmax_ratio::Float64 = 1.0)

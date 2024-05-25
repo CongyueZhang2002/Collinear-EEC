@@ -11,7 +11,7 @@ include("..\\cusp\\cusp.jl")
 
 @everywhere function γS0_func(nf)
 
-    γS0 = 0
+    γS0 = 0.0
 
     return γS0
 end
@@ -76,46 +76,44 @@ end
     return γS_f
 end
 
-@everywhere function log_αs(; αs_μi::Float64, αs_μf::Float64, order::Int64, nf::Int64)
+#@everywhere function log_αs(; αs_μi::Float64, αs_μf::Float64, order::Int64, nf::Int64)
+#
+#    β0 = β0_func(nf)
+#    β1 = β1_func(nf)
+#    β2 = β2_func(nf)
+#    β3 = β3_func(nf)
 
-    β0 = β0_func(nf)
-    β1 = β1_func(nf)
-    β2 = β2_func(nf)
-    β3 = β3_func(nf)
+#    β_1(x) = 1/(-2*x[1]*(x[1]/(4π)*β0))
+#    β_2(x) = 1/(-2*x[1]*(x[1]/(4π)*β0 + (x[1]/(4π))^2*β1))
+#    β_3(x) = 1/(-2*x[1]*(x[1]/(4π)*β0 + (x[1]/(4π))^2*β1 + (x[1]/(4π))^3*β2))
+#    β_4(x) = 1/(-2*x[1]*(x[1]/(4π)*β0 + (x[1]/(4π))^2*β1 + (x[1]/(4π))^3*β2 + (x[1]/(4π))^4*β3))
 
-    β_1(x) = 1/(-2*x[1]*(x[1]/(4π)*β0))
-    β_2(x) = 1/(-2*x[1]*(x[1]/(4π)*β0 + (x[1]/(4π))^2*β1))
-    β_3(x) = 1/(-2*x[1]*(x[1]/(4π)*β0 + (x[1]/(4π))^2*β1 + (x[1]/(4π))^3*β2))
-    β_4(x) = 1/(-2*x[1]*(x[1]/(4π)*β0 + (x[1]/(4π))^2*β1 + (x[1]/(4π))^3*β2 + (x[1]/(4π))^4*β3))
-
-    if order == 1 
-        integral, error = hcubature(β_1, [αs_μi], [αs_μf])
-    end
-    if order == 2 
-        integral, error = hcubature(β_2, [αs_μi], [αs_μf])
-    end
-    if order == 3 
-        integral, error = hcubature(β_3, [αs_μi], [αs_μf])
-    end
-    if order == 4 
-        integral, error = hcubature(β_4, [αs_μi], [αs_μf])
-    end
+#    if order == 1 
+#        integral, error = hcubature(β_1, [αs_μi], [αs_μf])
+#    end
+#    if order == 2 
+#        integral, error = hcubature(β_2, [αs_μi], [αs_μf])
+#    end
+#    if order == 3 
+#        integral, error = hcub\siature(β_3, [αs_μi], [αs_μf])
+#    end
+#    if order == 4 
+#        integral, error = hcubature(β_4, [αs_μi], [αs_μf])
+#    end
     
-    return integral
-end
+#    return integral
+#end
 
-@everywhere function γS_analytic(; αs_μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
-
-    αs_ν = alpha_s_func(μf=ν, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-
-    Γ = Γ_func(αs=αs_μ, order=order+1, nf=nf)
-    γS = -γS_func(αs=αs_μ, order=order, nf=nf)
-
-    log_term = log_αs(αs_μi=αs_ν, αs_μf=αs_μ, order=order, nf=nf)
-
-    γS_f = 4*Γ*log_term + γS
-    
-    return γS_f
-end
-
-print(γS_analytic(ν=2.0, αs_μ=0.11637990402830682, αs_ini=0.118, μ_ini=91.2, order=3, nf=5) - γS_final(ν=2.0, μ=100.0, αs_ini=0.118, μ_ini=91.2, order=3, nf=5))
+#@everywhere function γS_semi(; αs_μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+#
+#    αs_ν = alpha_s_func(μf=ν, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+#
+#    Γ = Γ_func(αs=αs_μ, order=order+1, nf=nf)
+#    γS = -γS_func(αs=αs_μ, order=order, nf=nf)
+#
+#    log_term = log_αs(αs_μi=αs_ν, αs_μf=αs_μ, order=order, nf=nf)
+#
+#    γS_f = 4*Γ*log_term + γS
+#    
+#    return γS_f
+#end

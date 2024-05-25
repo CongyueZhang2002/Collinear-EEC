@@ -6,6 +6,7 @@ using HCubature
 include("..\\..\\strong coupling\\constants.jl")
 include("..\\..\\strong coupling\\alpha_s.jl")
 include("..\\cusp\\cusp.jl")
+include("..\\non-cusp\\Integration.jl")
 
 # rapidity ν
 
@@ -141,23 +142,49 @@ end
 
 end
 
-@everywhere function γν_analytic(; b::Float64, μB::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64, bmax::Float64)
+#@everywhere function γν_semi(; b::Float64, μB::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64, bmax::Float64)
+#
+#    bstar = b/(1+(b/bmax)^2)^0.5
+#
+#    μ0 = b0/bstar
+#
+#    αs_μ0 = alpha_s_func(μf=μ0, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+#    αs_μB = alpha_s_func(μf=μB, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+#    αs_μ_max = αs_μB
+#    αs_μ_min = αs_μ0
+#
+#    f(x) = -4/(β_func(αs=x[1], order=order, nf=nf))*Γ_func(αs=x[1], order=order+1, nf=nf)
+#
+#    integral, error = hcubature(f, [αs_μ_min], [αs_μ_max])
+#
+#    γν_FO = γν_func(b=b, μ0=μ0, αs=αs_μ0, order=order, nf=nf)
+#    total = integral + γν_FO
+#
+#   return total
+#
+#end
+
+@everywhere function γν_analytic(; b::Float64, μf::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64, bmax::Float64)
 
     bstar = b/(1+(b/bmax)^2)^0.5
 
     μ0 = b0/bstar
 
     αs_μ0 = alpha_s_func(μf=μ0, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-    αs_μB = alpha_s_func(μf=μB, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-    αs_μ_max = αs_μB
-    αs_μ_min = αs_μ0
-
-    f(x) = -4/(β_func(αs=x[1], order=order, nf=nf))*Γ_func(αs=x[1], order=order+1, nf=nf)
-
-    integral, error = hcubature(f, [αs_μ_min], [αs_μ_max])
 
     γν_FO = γν_func(b=b, μ0=μ0, αs=αs_μ0, order=order, nf=nf)
-    total = integral + γν_FO
+    
+    Γ0 = Γ0_func(nf)
+    Γ1 = Γ1_func(nf)   
+    Γ2 = Γ2_func(nf)   
+    Γ3 = Γ3_func(nf)   
+
+    total = (
+        γν_FO
+        -4 * η_integral(; μi=μ0, μf=μf, 
+                       F0=Γ0, F1=Γ1, F2=Γ2, F3=Γ3,
+                       αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+    )
 
     return total
 

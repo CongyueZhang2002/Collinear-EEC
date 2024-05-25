@@ -3,20 +3,6 @@ using PolyLog
 include("..\\strong coupling\\constants.jl")
 include("..\\strong coupling\\alpha_s.jl")
 
-print(reli(3,-sqrt(0.5)))
-#function A1_func(z)
-#    value = 4/3 * (
-#        - 1/2*log(1-z)/(1-z) 
-#        - 3/4*(1-z) 
-#        + 3/8*(1/z)
-#        + 1/(8z^5) * (
-#            4*(- z^4 - z^3 + 3z^2 - 15z + 9)*log(1-z)
-#            - 9z^4 - 6z^3 - 42z^2 + 36z
-#        )
-#    )
-#    return value
-#end
-
 #------------------------------------------
 
 function g11_func(z)
@@ -359,84 +345,84 @@ end
 
 #------------------------------------------
 
-function Blc_to1_func(z) 
-    value = (
-        -16129/288 + (53*log(1 - z)^2)/4 + 2*log(1 - z)^3 + 
-     (2893*z2)/40 + log(1 - z)*(-319/36 + 25*z2) + 
-     (1 - z)^2*(286777/288 + (239*log(1 - z)^2)/4 + (27*log(1 - z)^3)/2 + 
-       (356239*z2)/960 + log(1 - z)*(-47383/72 + 545*z2) - 
-       1230*z3) - 8*z3 + (-25/16 + (49*log(1 - z)^2)/12 + 
-       log(1 - z)^3/2 + (17*z2)/2 + log(1 - z)*(59/18 + 2*z2) + 
-       2*z3)/(1 - z) + (1 - z)*(-44665/288 + (175*log(1 - z)^2)/6 + 
-       (79*log(1 - z)^3)/12 + log(1 - z)*(757/3 - 85*z2) - 
-       (5197*z2)/30 + 449*z3) + 
-     (1 - z)^3*(-165863/72 + (449*log(1 - z)^2)/4 + (45*log(1 - z)^3)/2 + 
-       log(1 - z)*(60775/48 - 545*z2) - (46315*z2)/192 + 
-       2310*z3)
-    )
-    return value
-end
+#function Blc_to1_func(z) 
+#    value = (
+#        -16129/288 + (53*log(1 - z)^2)/4 + 2*log(1 - z)^3 + 
+#     (2893*z2)/40 + log(1 - z)*(-319/36 + 25*z2) + 
+#     (1 - z)^2*(286777/288 + (239*log(1 - z)^2)/4 + (27*log(1 - z)^3)/2 + 
+#       (356239*z2)/960 + log(1 - z)*(-47383/72 + 545*z2) - 
+#       1230*z3) - 8*z3 + (-25/16 + (49*log(1 - z)^2)/12 + 
+#       log(1 - z)^3/2 + (17*z2)/2 + log(1 - z)*(59/18 + 2*z2) + 
+#       2*z3)/(1 - z) + (1 - z)*(-44665/288 + (175*log(1 - z)^2)/6 + 
+#       (79*log(1 - z)^3)/12 + log(1 - z)*(757/3 - 85*z2) - 
+#       (5197*z2)/30 + 449*z3) + 
+#     (1 - z)^3*(-165863/72 + (449*log(1 - z)^2)/4 + (45*log(1 - z)^3)/2 + 
+#       log(1 - z)*(60775/48 - 545*z2) - (46315*z2)/192 + 
+#       2310*z3)
+#    )
+#    return value
+#end
 
-function Bnlc_to1_func(z) 
-    value = (
-        -3305/72 + (27*log(1 - z)^2)/8 + log(1 - z)^3/2 + 
-        (6347*z2)/80 - 21*log(2)*z2 + 
-        log(1 - z)*(-2011/72 + 22*z2) + 
-        (1 - z)^2*(100897/108 + (493*log(1 - z)^2)/24 + (59*log(1 - z)^3)/12 + 
-          (54695*z2)/128 - 105*log(2)*z2 + 
-          log(1 - z)*(-18607/24 + (1007*z2)/2) - (5009*z3)/4) - 
-        (137*z3)/4 + (-35/16 + (11*log(1 - z)^2)/12 + 
-          log(1 - z)*(-35/72 + z2/2) + (11*z2)/4 + (3*z3)/2)/
-         (1 - z) + (1 - z)*(-7663/36 + (179*log(1 - z)^2)/24 + 2*log(1 - z)^3 + 
-          log(1 - z)*(671/3 - (237*z2)/2) - (8075*z2)/48 - 
-          42*log(2)*z2 + 464*z3) + 
-        (1 - z)^3*(-489985/192 + (731*log(1 - z)^2)/16 + (115*log(1 - z)^3)/12 + 
-          log(1 - z)*(68317/72 - 551*z2) + (14215*z2)/192 - 
-          198*log(2)*z2 + 2152*z3)
-    )
-    return value
-end
+#function Bnlc_to1_func(z) 
+#    value = (
+#        -3305/72 + (27*log(1 - z)^2)/8 + log(1 - z)^3/2 + 
+#        (6347*z2)/80 - 21*log(2)*z2 + 
+#        log(1 - z)*(-2011/72 + 22*z2) + 
+#        (1 - z)^2*(100897/108 + (493*log(1 - z)^2)/24 + (59*log(1 - z)^3)/12 + 
+#          (54695*z2)/128 - 105*log(2)*z2 + 
+#          log(1 - z)*(-18607/24 + (1007*z2)/2) - (5009*z3)/4) - 
+#        (137*z3)/4 + (-35/16 + (11*log(1 - z)^2)/12 + 
+#          log(1 - z)*(-35/72 + z2/2) + (11*z2)/4 + (3*z3)/2)/
+#         (1 - z) + (1 - z)*(-7663/36 + (179*log(1 - z)^2)/24 + 2*log(1 - z)^3 + 
+#          log(1 - z)*(671/3 - (237*z2)/2) - (8075*z2)/48 - 
+#          42*log(2)*z2 + 464*z3) + 
+#        (1 - z)^3*(-489985/192 + (731*log(1 - z)^2)/16 + (115*log(1 - z)^3)/12 + 
+#          log(1 - z)*(68317/72 - 551*z2) + (14215*z2)/192 - 
+#          198*log(2)*z2 + 2152*z3)
+#    )
+#    return value
+#end
 
-function BNf_to1_func(z) 
-    value = (
-         2099/144 - log(1 - z)^2/2 + log(1 - z)*(361/36 - 4*z2) + 
-        (3/4 + log(1 - z)/18 - log(1 - z)^2/3 - z2)/(1 - z) - 
-        (1747*z2)/120 + (1 - z)^3*(62657/48 + (20*log(1 - z)^2)/3 + 
-          (14177*z2)/192 + log(1 - z)*(-11771/18 + 400*z2) - 
-          1200*z3) + (1 - z)*(1637/144 - (5*log(1 - z)^2)/3 + 
-          (7891*z2)/60 + log(1 - z)*(-1177/12 + 64*z2) - 
-          192*z3) + 12*z3 + (1 - z)^2*(-269485/432 - log(1 - z)^2/6 + 
-          log(1 - z)*(2647/6 - 264*z2) - (196571*z2)/960 + 792*z3)
-    )
-    return value
-end
+#function BNf_to1_func(z) 
+#    value = (
+#         2099/144 - log(1 - z)^2/2 + log(1 - z)*(361/36 - 4*z2) + 
+#        (3/4 + log(1 - z)/18 - log(1 - z)^2/3 - z2)/(1 - z) - 
+#        (1747*z2)/120 + (1 - z)^3*(62657/48 + (20*log(1 - z)^2)/3 + 
+#          (14177*z2)/192 + log(1 - z)*(-11771/18 + 400*z2) - 
+#          1200*z3) + (1 - z)*(1637/144 - (5*log(1 - z)^2)/3 + 
+#          (7891*z2)/60 + log(1 - z)*(-1177/12 + 64*z2) - 
+#          192*z3) + 12*z3 + (1 - z)^2*(-269485/432 - log(1 - z)^2/6 + 
+#          log(1 - z)*(2647/6 - 264*z2) - (196571*z2)/960 + 792*z3)
+#    )
+#    return value
+#end
 
 #------------------------------------------
 
-function perturbation_to1_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
-
-    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
-
-    A = A1_func(z)
-    Blc = Blc_to1_func(z)
-    Bnlc = Bnlc_to1_func(z)
-    BNf = BNf_to1_func(z)
-
-    B = CF^2*Blc + CF*(CA-2CF)*Bnlc + CF*nf*TF*BNf
-
-    order1 = (αs/(2π))*A
-    order2 = (αs/(2π))^2*B
-
-    if order == 1 
-        total = order1
-    end
-    if order == 2 
-        total = order1 + order2
-    end
-
-    return 2*total
-
-end
+#function perturbation_to1_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+#
+#    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
+#
+#    A = A1_func(z)
+#    Blc = Blc_to1_func(z)
+#    Bnlc = Bnlc_to1_func(z)
+#    BNf = BNf_to1_func(z)
+#
+#    B = CF^2*Blc + CF*(CA-2CF)*Bnlc + CF*nf*TF*BNf
+#
+#    order1 = (αs/(2π))*A
+#    order2 = (αs/(2π))^2*B
+#
+#    if order == 1 
+#        total = order1
+#    end
+#    if order == 2 
+#        total = order1 + order2
+#    end
+#
+#    return 2*total
+#
+#end
 
 function perturbation_to1_sigma_χ(; χ::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
 

@@ -61,11 +61,7 @@ end
     αs_i = alpha_s_func(μf=μi, μi=μ_ini, αs=αs_ini, order=order+1,nf=5)
     αs_f = alpha_s_func(μf=μf, μi=μ_ini, αs=αs_ini, order=order+1,nf=5)
 
-    if Q < 1
-        αs_Q = alpha_s_func(μf=1.0, μi=μ_ini, αs=αs_ini, order=order+1,nf=5)
-    else
-        αs_Q = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=order+1,nf=5)
-    end
+    αs_Q = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=order+1,nf=5)
 
     r = αs_f/αs_i
     rQ = αs_i/αs_Q
@@ -126,5 +122,27 @@ function KΓ_test(; μi::Float64, μf::Float64, scale::Float64, αs_ini::Float64
     return integral
 end
 
-print(" KΓ analytic: ",KΓ_integral(μi=10.0, μf=100.0, scale=0.01, αs_ini=0.118, μ_ini=91.2, order=3, nf=5))
-print(" KΓ numerical: ",KΓ_test(μi=10.0, μf=100.0, scale=0.01, αs_ini=0.118, μ_ini=91.2, order=3, nf=5))
+#print(" KΓ analytic: ",KΓ_integral(μi=10.0, μf=100.0, scale=0.01, αs_ini=0.118, μ_ini=91.2, order=3, nf=5))
+#print(" KΓ numerical: ",KΓ_test(μi=10.0, μf=100.0, scale=0.01, αs_ini=0.118, μ_ini=91.2, order=3, nf=5))
+
+function η_Integrand(; μ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+
+    αs_μ = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+
+    Γ = Γ_func(αs=αs_μ, order=order+1, nf=nf)
+    
+    return Γ
+end
+
+function η_test(; μi::Float64, μf::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+    f(x)=1/x[1]*η_Integrand(μ=x[1], αs_ini=0.118, μ_ini=91.2, order=3, nf=5)
+    integral, error = hcubature(f, [μi], [μf])
+    return integral
+end
+
+a = η_integral(; μi=1., μf=100.0, 
+F0=Γ0_func(5), F1=Γ1_func(5), F2=Γ2_func(5), F3=Γ3_func(5),
+αs_ini=0.118, μ_ini=91.2, order=3, nf=5)
+
+#print(" η analytic: ", a)
+#print(" η numerical: ", η_test(μi=1.0, μf=100.0, αs_ini=0.118, μ_ini=91.2, order=3, nf=5))

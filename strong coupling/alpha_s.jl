@@ -107,35 +107,35 @@ end
 
 end
 
-function alpha_s_func_schwartz(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
-
-    β0 = β0_func(nf)
-    β1 = β1_func(nf)
-    β2 = β2_func(nf)
-    β3 = β3_func(nf)
-
-    L = log(μf/μi)
-    order1 = αs
-    order2 = - αs^2/(2π)*β0*L
-    order3 = αs^3/(8*π^2)*(-β1*L+2*β0^2*L^2)
-    order4 = αs^4/(32*π^2)*(-β2*L+5*β0*β1*L^2-4*β0^3*L^3)
- 
-    if order == 1 
-        total = order1
-    end
-    if order == 2 
-        total = order1 + order2
-    end
-    if order == 3 
-        total = order1 + order2 + order3
-    end
-    if order == 4 
-        total = order1 + order2 + order3 + order4
-    end
-
-    return total
-
-end
+#function alpha_s_func_schwartz(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
+#
+#    β0 = β0_func(nf)
+#    β1 = β1_func(nf)
+#    β2 = β2_func(nf)
+#    β3 = β3_func(nf)
+#
+#    L = log(μf/μi)
+#    order1 = αs
+#    order2 = - αs^2/(2π)*β0*L
+#    order3 = αs^3/(8*π^2)*(-β1*L+2*β0^2*L^2)
+#    order4 = αs^4/(32*π^2)*(-β2*L+5*β0*β1*L^2-4*β0^3*L^3)
+# 
+#    if order == 1 
+#        total = order1
+#    end
+#    if order == 2 
+#        total = order1 + order2
+#    end
+#    if order == 3 
+#        total = order1 + order2 + order3
+#    end
+#    if order == 4 
+#        total = order1 + order2 + order3 + order4
+#    end
+#
+#    return total
+#
+#end
 
 function alpha_s_func_numerical(; μf::Float64, μi::Float64, αs::Float64, order::Int64)
 
@@ -153,29 +153,29 @@ function alpha_s_func_numerical(; μf::Float64, μi::Float64, αs::Float64, orde
 
 end
 
-function alpha_s_func_NNLL(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
-
-    β0 = β0_func(nf)
-    β1 = β1_func(nf)
-    β2 = β2_func(nf)
-    β3 = β3_func(nf)
-
-    order1 = αs/(1+αs/(4π)*β0*log((μf/μi)^2))
-    order2 = -(order1)^2*β1/(4*π*β0)*log(αs/order1)
-    order3 = (order1)^3*(
-        β1^2/(4π*β0)^2*log(αs/order1)*(log(αs/order1)-1)
-        - (β1^2/(4π*β0)^2 - β2/(16*π^2*β0))*(1-log(αs/order1))
-    )
-
-    if order == 1 
-        total = order1
-    end
-    if order == 2 
-        total = order1 + order2
-    end
-    if order == 3 
-        total = order1 + order2 + order3
-    end
-    return total
-    
-end
+#function alpha_s_func_NNLL(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
+#
+#    β0 = β0_func(nf)
+#    β1 = β1_func(nf)
+#    β2 = β2_func(nf)
+#    β3 = β3_func(nf)
+#
+#    order1 = αs/(1+αs/(4π)*β0*log((μf/μi)^2))
+#    order2 = -(order1)^2*β1/(4*π*β0)*log(αs/order1)
+#    order3 = (order1)^3*(
+#        β1^2/(4π*β0)^2*log(αs/order1)*(log(αs/order1)-1)
+#        - (β1^2/(4π*β0)^2 - β2/(16*π^2*β0))*(1-log(αs/order1))
+#    )
+#
+#    if order == 1 
+#        total = order1
+#    end
+#    if order == 2 
+#        total = order1 + order2
+#    end
+#    if order == 3 
+#        total = order1 + order2 + order3
+#    end
+#    return total
+#    
+#end
