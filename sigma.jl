@@ -18,6 +18,7 @@ using SpecialFunctions
     include("hard\\hard.jl")
     include("jet\\jet.jl")
     include("soft\\soft.jl")
+    include("NP.jl")
 
 #NUMERICAL
 
@@ -39,11 +40,11 @@ using SpecialFunctions
     #    return integral
     #end
 
-    function Integral_S(; νS::Float64, μB::Float64, μS::Float64, 
+    function Integral_S(; νS::Float64, μf::Float64, μS::Float64, 
                         αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
     
         f(x)=1/x[1]*γS_final(μ=x[1], ν=νS, αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
-       integral, error = hcubature(f, [μS], [μB])
+       integral, error = hcubature(f, [μS], [μf])
         return integral
     end
 
@@ -146,9 +147,41 @@ using SpecialFunctions
         return total
     end
 
+    function Integral_S_analytic(; νS::Float64, μf::Float64, μS::Float64,
+                                   αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+    
+        Γ0 = Γ0_func(nf)
+        Γ1 = Γ1_func(nf)
+        Γ2 = Γ2_func(nf)
+        Γ3 = Γ3_func(nf) 
+
+        γS0 = γS0_func(nf) 
+        γS1 = γS1_func(nf)
+        γS2 = γS2_func(nf)
+        γS3 = 0.0
+
+        γS0_tilde = - γS0
+        γS1_tilde = - γS1
+        γS2_tilde = - γS2
+        γS3_tilde = 0.0
+
+        total = (
+              4*KΓ_integral(; μi=μS, μf=μf, scale=100.0, αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+            + 4*η_integral(; μi=μS, μf=μf, 
+                        F0=Γ0, F1=Γ1, F2=Γ2, F3=Γ3,
+                        αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)*log(100.0/νS)
+            #+ 4*η_integral(; μi=μS, μf=μf, 
+              #          F0=γS0_tilde, F1=γS1_tilde, F2=γS2_tilde, F3=γS3_tilde,
+              #          αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+        )
+    
+        return total
+    end
+    
     function Integrand(;b::Float64, Q::Float64, z::Float64, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
         μJ_ratio::Float64, νJ_ratio::Float64, μH_ratio::Float64,
-        μS_ratio::Float64, νS_ratio::Float64, bmax_ratio::Float64)
+        μS_ratio::Float64, νS_ratio::Float64, bmax_ratio::Float64,
+        parameters::Vector{Float64})
 
         if b < 1.0e-9
             return 0.0
@@ -165,7 +198,7 @@ using SpecialFunctions
         νS = νS_ratio * b0/b
         μH = μH_ratio * Q
         
-        μf = μS
+        μf = μJ # μf is the μ
 
         αs_J = alpha_s_func(μf=μJ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
         αs_S = alpha_s_func(μf=μS, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
@@ -176,16 +209,18 @@ using SpecialFunctions
         γH_Integral = Integral_H_analytic(Q=Q, μf=μf, μH=μH, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
 
-        γJ_Integral = Integral_J_analytic(νB=νJ, μB=μJ, μf=μf, Q=Q,
-                                αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
-        
-        #γS_Integral = Integral_S(νS=νS, μB=μJ, μS=μS, 
+        #γJ_Integral = Integral_J_analytic(νB=νJ, μB=μJ, μf=μf, Q=Q,
         #                        αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
+        
+        γS_Integral = Integral_S(νS=νS, μf=μf, μS=μS, 
+                                αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf)
 
         γν_Integral = γν_analytic(b=b, μf=μf, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=order, nf=nf, bmax=bmax)
 
-        total = Q^2/4*b*J0*J*J*S*exp(γH_Integral+2*γJ_Integral)*(νJ/νS)^γν_Integral
+        NP_Sudakov = NP(b=b, parameters=parameters)
+
+        total = Q^2/4*b*J0*J*J*S*exp(γH_Integral+γS_Integral)*(νJ/νS)^γν_Integral*NP_Sudakov
 
         return total
     end
@@ -201,13 +236,15 @@ using SpecialFunctions
 
     function sigma_z(; Q::Float64, z::Float64, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
                     μH_ratio::Float64, μJ_ratio::Float64, νJ_ratio::Float64, 
-                    μS_ratio::Float64, νS_ratio::Float64, bmax_ratio::Float64)
+                    μS_ratio::Float64, νS_ratio::Float64, bmax_ratio::Float64,
+                    parameters::Vector{Float64})
 
         f(x) = Integrand(b=x[1], Q=Q, z=z, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order,
                         μJ_ratio=μJ_ratio, νJ_ratio=νJ_ratio, μS_ratio=μS_ratio, 
-                        νS_ratio=νS_ratio, μH_ratio=μH_ratio, bmax_ratio=bmax_ratio)
+                        νS_ratio=νS_ratio, μH_ratio=μH_ratio, bmax_ratio=bmax_ratio,
+                        parameters=parameters)
 
-        integral, error = hcubature(f, [0.0], [100.0])
+        integral, error = hcubature(f, [0.0], [50.0])
         
         hard = Hard_Part(Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, μH_ratio=μH_ratio, order=order)
 
@@ -218,13 +255,15 @@ using SpecialFunctions
 
     function sigma_χ(; Q::Float64, χ::Float64, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
         μH_ratio::Float64=1.0, μJ_ratio::Float64=1.0, νJ_ratio::Float64=1.0, 
-        μS_ratio::Float64=1.0, νS_ratio::Float64=1.0, bmax_ratio::Float64=1.0)
+        μS_ratio::Float64=1.0, νS_ratio::Float64=1.0, bmax_ratio::Float64=1.0,
+        parameters::Vector{Float64})
 
         z = 0.5*(1-cos(χ))
 
         part = sigma_z(Q=Q, z=z, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order,
                         μH_ratio=μH_ratio, μJ_ratio=μJ_ratio, νJ_ratio=νJ_ratio, 
-                        μS_ratio=μS_ratio, νS_ratio=νS_ratio, bmax_ratio=bmax_ratio)
+                        μS_ratio=μS_ratio, νS_ratio=νS_ratio, bmax_ratio=bmax_ratio,
+                        parameters=parameters)
 
         total = 0.5*sin(χ)*part
 
@@ -236,7 +275,8 @@ end
 #PARALELL
 function sigma_fast(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
     μH_ratio::Float64=1.0, μJ_ratio::Float64=1.0, νJ_ratio::Float64=1.0, 
-    μS_ratio::Float64=1.0, νS_ratio::Float64=1.0, bmax_ratio::Float64=1.0)
+    μS_ratio::Float64=1.0, νS_ratio::Float64=1.0, bmax_ratio::Float64=1.0,
+    parameters::Vector{Float64}=[0.0,0.0,0.0])
     try
         #if length(workers()) < cores
         #    addprocs(cores - length(workers()))  
@@ -251,7 +291,8 @@ function sigma_fast(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs
         function compute_sigma_χ(χ)
             return sigma_χ(Q=Q1, χ=χ, μ_ini=μ_ini1, αs_ini=αs_ini1, nf=nf1, order=order1,
                             μH_ratio=μH_ratio, μJ_ratio=μJ_ratio, νJ_ratio=νJ_ratio, 
-                            μS_ratio=μS_ratio, νS_ratio=νS_ratio, bmax_ratio=bmax_ratio)
+                            μS_ratio=μS_ratio, νS_ratio=νS_ratio, bmax_ratio=bmax_ratio,
+                            parameters=parameters)
         end
 
         results = pmap(compute_sigma_χ, χ_list)
