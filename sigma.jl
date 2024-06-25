@@ -19,6 +19,7 @@ using SpecialFunctions
     include("jet\\jet.jl")
     include("soft\\soft.jl")
     include("NP.jl")
+    include("renormalon.jl")
 
 #NUMERICAL
 
@@ -237,18 +238,22 @@ using SpecialFunctions
     function sigma_z(; Q::Float64, z::Float64, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
                     μH_ratio::Float64, μJ_ratio::Float64, νJ_ratio::Float64, 
                     μS_ratio::Float64, νS_ratio::Float64, bmax_ratio::Float64,
-                    parameters::Vector{Float64})
+                    parameters::Vector{Float64}, 
+                    Ω1::Float64, μ_ren_ratio::Float64)
 
         f(x) = Integrand(b=x[1], Q=Q, z=z, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order,
                         μJ_ratio=μJ_ratio, νJ_ratio=νJ_ratio, μS_ratio=μS_ratio, 
                         νS_ratio=νS_ratio, μH_ratio=μH_ratio, bmax_ratio=bmax_ratio,
-                        parameters=parameters)
+                        parameters=parameters)               
 
         integral, error = hcubature(f, [0.0], [50.0])
         
         hard = Hard_Part(Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, μH_ratio=μH_ratio, order=order)
 
-        total = hard*integral
+        μ_ren = μ_ren_ratio * Q
+        renormalon = renormalon_func(z=z, Q=Q, μ_ren=μ_ren, μ_ini=μ_ini, αs_ini=αs_ini, order=2, nf=nf, Ω1=Ω1) 
+
+        total = hard*integral + renormalon
 
         return total
     end
@@ -256,14 +261,16 @@ using SpecialFunctions
     function sigma_χ(; Q::Float64, χ::Float64, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
         μH_ratio::Float64=1.0, μJ_ratio::Float64=1.0, νJ_ratio::Float64=1.0, 
         μS_ratio::Float64=1.0, νS_ratio::Float64=1.0, bmax_ratio::Float64=1.0,
-        parameters::Vector{Float64})
+        parameters::Vector{Float64},
+        Ω1::Float64, μ_ren_ratio::Float64=1.0)
 
         z = 0.5*(1-cos(χ))
 
         part = sigma_z(Q=Q, z=z, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order,
                         μH_ratio=μH_ratio, μJ_ratio=μJ_ratio, νJ_ratio=νJ_ratio, 
                         μS_ratio=μS_ratio, νS_ratio=νS_ratio, bmax_ratio=bmax_ratio,
-                        parameters=parameters)
+                        parameters=parameters,
+                        Ω1=Ω1, μ_ren_ratio=μ_ren_ratio)
 
         total = 0.5*sin(χ)*part
 
@@ -276,7 +283,9 @@ end
 function sigma_fast(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64,
     μH_ratio::Float64=1.0, μJ_ratio::Float64=1.0, νJ_ratio::Float64=1.0, 
     μS_ratio::Float64=1.0, νS_ratio::Float64=1.0, bmax_ratio::Float64=1.0,
-    parameters::Vector{Float64}=[0.0,0.0,0.0])
+    parameters::Vector{Float64}=[0.0,0.0,0.0],
+    Ω1::Float64=0.0, μ_ren_ratio::Float64=1.0)
+
     try
         #if length(workers()) < cores
         #    addprocs(cores - length(workers()))  
@@ -292,7 +301,8 @@ function sigma_fast(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs
             return sigma_χ(Q=Q1, χ=χ, μ_ini=μ_ini1, αs_ini=αs_ini1, nf=nf1, order=order1,
                             μH_ratio=μH_ratio, μJ_ratio=μJ_ratio, νJ_ratio=νJ_ratio, 
                             μS_ratio=μS_ratio, νS_ratio=νS_ratio, bmax_ratio=bmax_ratio,
-                            parameters=parameters)
+                            parameters=parameters,
+                            Ω1=Ω1, μ_ren_ratio=μ_ren_ratio)
         end
 
         results = pmap(compute_sigma_χ, χ_list)

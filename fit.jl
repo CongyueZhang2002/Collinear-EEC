@@ -14,11 +14,11 @@ include("jet\\jet.jl")
 include("soft\\soft.jl")
 include("sigma.jl")
 
-function model(; xlist::Vector{Float64}, αs::Float64, parameters::Vector{Float64}=[0.0,0.0,0.0])
+function model(; xlist::Vector{Float64}, αs::Float64, parameters::Vector{Float64}=[0.0,0.0,0.0], Ω1::Float64=0.0)
 
     χ_list = π / 180 * xlist
 
-    resum = sigma_fast(Q=91.2, χ_list=χ_list, μ_ini=91.1876, αs_ini=αs, nf=5, order=2, parameters=parameters)
+    resum = sigma_fast(Q=91.2, χ_list=χ_list, μ_ini=91.1876, αs_ini=αs, nf=5, order=2, parameters=parameters,Ω1=Ω1)
 
     non_singular = Float64[]
 
