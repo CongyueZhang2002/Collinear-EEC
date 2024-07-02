@@ -251,7 +251,7 @@ using SpecialFunctions
         hard = Hard_Part(Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, μH_ratio=μH_ratio, order=order)
 
         μ_ren = μ_ren_ratio * Q
-        renormalon = renormalon_func(z=z, Q=Q, μ_ren=μ_ren, μ_ini=μ_ini, αs_ini=αs_ini, order=2, nf=nf, Ω1=Ω1) 
+        renormalon = renormalon_MS_func(z=z, Q=Q, μ_ren=μ_ren, μ_ini=μ_ini, αs_ini=αs_ini, order=2, nf=nf, Ω1=Ω1) 
 
         total = hard*integral + renormalon
 
