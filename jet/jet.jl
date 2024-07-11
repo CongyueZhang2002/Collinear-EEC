@@ -201,11 +201,9 @@ end
 
     if order == 1 
         total = J1
-    end
-    if order == 2  
+    elseif order == 2  
         total = J1 + J2
-    end
-    if order == 3 
+    elseif order == 3 
         total = J1 + J2 + J3
     end
 

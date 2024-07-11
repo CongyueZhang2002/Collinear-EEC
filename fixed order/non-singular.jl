@@ -12,7 +12,7 @@ function non_singular_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::F
 
     if order == 3
 
-        αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
+        αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
 
         if ((z<0.98) && (z>0.01))
             order3 =  7.5 * log(1-z)^5 

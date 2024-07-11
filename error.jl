@@ -1,15 +1,18 @@
+# https://arxiv.org/pdf/1307.1808
+
 using DataFrames
 using Distributions
 
+# Band Method
 function ratios()
 
-    ratio_matrix = DataFrame(μS=Float64[], μB=Float64[], νS=Float64[], νB=Float64[])
+    ratio_matrix = DataFrame(μS_ratio=Float64[], μJ_ratio=Float64[], νS_ratio=Float64[], νJ_ratio=Float64[])
 
     for i in [1/2, 1, 2]
         for j in [1/2, 1, 2]
             for k in [1/2, 1, 2]
                 for l in [1/2, 1, 2]    
-                    push!(ratio_matrix, (μS=i, μB=j, νS=k, νB=l))
+                    push!(ratio_matrix, (μS_ratio=i, μJ_ratio=j, νS_ratio=k, νJ_ratio=l))
                 end
             end
         end
@@ -17,70 +20,86 @@ function ratios()
 
     n_rows = size(ratio_matrix, 1)
 
-    constrained_matrix = DataFrame(μS=Float64[], μB=Float64[], νS=Float64[], νB=Float64[])
+    constrained_matrix = DataFrame(μS_ratio=Float64[], μJ_ratio=Float64[], νS_ratio=Float64[], νJ_ratio=Float64[])
 
     for i in 1:n_rows
 
-        μS = ratio_matrix[i, :μS]
-        μB = ratio_matrix[i, :μB]
-        νS = ratio_matrix[i, :νS]
-        νB = ratio_matrix[i, :νB]
+        μS_ratio = ratio_matrix[i, :μS_ratio]
+        μJ_ratio = ratio_matrix[i, :μJ_ratio]
+        νS_ratio = ratio_matrix[i, :νS_ratio]
+        νJ_ratio = ratio_matrix[i, :νJ_ratio]
 
         if (
-            (abs(μS/μB) < 3) && (abs(μS/νS) < 3) && (abs(νB/νS) < 3) &&
-            (abs(μS/μB) > 1/3) && (abs(μS/νS) > 1/3) && (abs(νB/νS) > 1/3) &&
-            (μS != 1 || μB != 1 || νS != 1 || νB != 1) && 
-            (μB != 1/2 || νS != 1/2 || νB != 1) && (μB != 1/2 || νB != 2 || νS != 1) 
+            (νJ_ratio/νS_ratio <= 2) && (νJ_ratio/νS_ratio >= 1/2) &&
+            (μJ_ratio/μS_ratio <= 2) && (μJ_ratio/μS_ratio >= 1/2) &&
+            (μS_ratio != 1 || μJ_ratio != 1 || νS_ratio != 1 || νJ_ratio != 1) &&
+            !(νJ_ratio == 2 && μS_ratio == 2 && μJ_ratio == 1) && !(νJ_ratio == 2 && μS_ratio == 1 && μJ_ratio == 1/2) &&
+            !(μS_ratio == 2 && νJ_ratio == 2 && νS_ratio == 1) && !(μS_ratio == 2 && νJ_ratio == 1 && νS_ratio == 1/2) &&
+            !(νJ_ratio == 1/2 && μS_ratio == 1 && μJ_ratio == 2) && !(νJ_ratio == 1/2 && μS_ratio == 1/2 && μJ_ratio == 1) &&
+            !(μS_ratio == 1/2 && νJ_ratio == 1 && νS_ratio == 2) && !(μS_ratio == 1/2 && νJ_ratio == 1/2 && νS_ratio == 1)   
         )
-            push!(constrained_matrix, (μS=μS, μB=μB, νS=νS, νB=νB))
+            push!(constrained_matrix, (μS_ratio=μS_ratio, μJ_ratio=μJ_ratio, νS_ratio=νS_ratio, νJ_ratio=νJ_ratio))
         end
     end
 
     return constrained_matrix
 end
 
-function custom_random()
-    n = rand(Uniform(1.0,2.0)) 
-    if rand() < 0.5
-        return n  
-    else
-        return 1/n  
-    end
-end
+#Old
 
-function random_ratios(n)
-    constrained_matrix = DataFrame(μS=Float64[], μB=Float64[], νS=Float64[], νB=Float64[])
-    while size(constrained_matrix, 1) < n
-        μS, μB, νS, νB = (custom_random(),custom_random(),custom_random(),custom_random())  # Generate random values
+#function ratios()
+#
+#    ratio_matrix = DataFrame(μS_ratio=Float64[], μJ_ratio=Float64[], νS_ratio=Float64[], νJ_ratio=Float64[])
+#
+#    for i in [1/2, 1, 2]
+#        for j in [1/2, 1, 2]
+#            for k in [1/2, 1, 2]
+#                for l in [1/2, 1, 2]    
+#                    push!(ratio_matrix, (μS_ratio=i, μJ_ratio=j, νS_ratio=k, νJ_ratio=l))
+#                end
+#            end
+#        end
+#    end
+#
+#    n_rows = size(ratio_matrix, 1)
+#
+#    constrained_matrix = DataFrame(μS_ratio=Float64[], μJ_ratio=Float64[], νS_ratio=Float64[], νJ_ratio=Float64[])
+#
+#    for i in 1:n_rows
+#
+#        μS_ratio = ratio_matrix[i, :μS_ratio]
+#        μJ_ratio = ratio_matrix[i, :μJ_ratio]
+#        νS_ratio = ratio_matrix[i, :νS_ratio]
+#        νJ_ratio = ratio_matrix[i, :νJ_ratio]
+#
+#        if (
+#            (abs(μS_ratio/μJ_ratio) < 3) && (abs(μS_ratio/νS_ratio) < 3) && (abs(νJ_ratio/νS_ratio) < 3) &&
+#            (abs(μS_ratio/μJ_ratio) > 1/3) && (abs(μS_ratio/νS_ratio) > 1/3) && (abs(νJ_ratio/νS_ratio) > 1/3) &&
+#            (μS_ratio != 1 || μJ_ratio != 1 || νS_ratio != 1 || νJ_ratio != 1) && 
+#            (μJ_ratio != 1/2 || νS_ratio != 1/2 || νJ_ratio != 1) && (μJ_ratio != 1/2 || νJ_ratio != 2 || νS_ratio != 1) 
+#        )
+#            push!(constrained_matrix, (μS_ratio=μS_ratio, μJ_ratio=μJ_ratio, νS_ratio=νS_ratio, νJ_ratio=νJ_ratio))
+#        end
+#    end
+#
+#    return constrained_matrix
+#end
 
-        # Check the constraints
-        if (
-            (abs(μS/μB) <= 2) && (abs(μS/νS) <= 2) && (abs(νB/νS) <= 2) &&
-            (abs(μS/μB) >= 0.5) && (abs(μS/νS) >= 0.5) && (abs(νB/νS) >= 0.5)
-        )
-            push!(constrained_matrix, (μS=μS, μB=μB, νS=νS, νB=νB))
-        end
-    end
+function resum_error(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_ini::Float64, nf::Int64, XLL::String)
 
-    return constrained_matrix
-end
-
-
-function resum_error(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64)
-
-    central_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order)
+    central_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, XLL=XLL)
     ratio_matrix = ratios()
     n_rows = size(ratio_matrix, 1)
 
     delta_list = []
 
     for i in 1:n_rows
-        μS_ratio = ratio_matrix[i, :μS]
-        μJ_ratio = ratio_matrix[i, :μB]
-        νS_ratio = ratio_matrix[i, :νS]
-        νJ_ratio = ratio_matrix[i, :νB]
+        μS_ratio = ratio_matrix[i, :μS_ratio]
+        μJ_ratio = ratio_matrix[i, :μJ_ratio]
+        νS_ratio = ratio_matrix[i, :νS_ratio]
+        νJ_ratio = ratio_matrix[i, :νJ_ratio]
 
-        varied_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order,
+        varied_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, XLL=XLL,
                                 μJ_ratio=μJ_ratio, νJ_ratio=νJ_ratio, μS_ratio=μS_ratio, νS_ratio=νS_ratio)
 
         push!(delta_list, abs.(varied_list - central_list))
@@ -98,22 +117,22 @@ function resum_error(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, α
 
 end
 
-function fixed_error(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64)
+function fixed_error(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_ini::Float64, nf::Int64, XLL::String)
 
-    central_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order)
-    ratio_matrix = DataFrame(μS=Float64[1/2,2], μB=Float64[1/2,2], νS=Float64[1/2,2], νB=Float64[1/2,2], μH=Float64[1/2,2])
+    central_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, XLL=XLL)
+    ratio_matrix = DataFrame(μS_ratio=Float64[1/2,2], μJ_ratio=Float64[1/2,2], νS_ratio=Float64[1/2,2], νJ_ratio=Float64[1/2,2], μH_ratio=Float64[1/2,2])
     n_rows = size(ratio_matrix, 1)
 
     delta_list = []
 
     for i in 1:n_rows
-        μS_ratio = ratio_matrix[i, :μS]
-        μJ_ratio = ratio_matrix[i, :μB]
-        νS_ratio = ratio_matrix[i, :νS]
-        νJ_ratio = ratio_matrix[i, :νB]
-        μH_ratio = ratio_matrix[i, :μH]
+        μS_ratio = ratio_matrix[i, :μS_ratio]
+        μJ_ratio = ratio_matrix[i, :μJ_ratio]
+        νS_ratio = ratio_matrix[i, :νS_ratio]
+        νJ_ratio = ratio_matrix[i, :νJ_ratio]
+        μH_ratio = ratio_matrix[i, :μH_ratio]
 
-        varied_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order,
+        varied_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, XLL=XLL,
                                 μJ_ratio=μJ_ratio, νJ_ratio=νJ_ratio, μS_ratio=μS_ratio, νS_ratio=νS_ratio, μH_ratio=μH_ratio)
 
         push!(delta_list, abs.(varied_list - central_list))
@@ -131,18 +150,18 @@ function fixed_error(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, α
 
 end
 
-function NP_error(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_ini::Float64, nf::Int64, order::Int64)
+function NP_error(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_ini::Float64, nf::Int64, XLL::String)
 
-    central_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order)
-    ratio_matrix = DataFrame(bmax=[1/2,2])
+    central_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, XLL=XLL)
+    ratio_matrix = DataFrame(bmax_ratio=[1/2,2])
     n_rows = size(ratio_matrix, 1)
 
     delta_list = []
 
     for i in 1:n_rows
-        bmax_ratio = ratio_matrix[i, :bmax]
+        bmax_ratio = ratio_matrix[i, :bmax_ratio]
 
-        varied_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, order=order,
+        varied_list = sigma_fast(Q=Q, χ_list=χ_list, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf, XLL=XLL,
                                 bmax_ratio=bmax_ratio)
 
         push!(delta_list, abs.(varied_list - central_list))
@@ -159,3 +178,4 @@ function NP_error(; Q::Float64, χ_list::Vector{Float64}, μ_ini::Float64, αs_i
     return NP_list
 
 end
+

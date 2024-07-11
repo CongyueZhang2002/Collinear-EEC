@@ -1,5 +1,6 @@
 # cusp anomalous dimension up to 4 loops from https://arxiv.org/pdf/1911.10174.pdf
 # expand in order of (αs/4π)^n
+# https://arxiv.org/pdf/2205.02242 5 loop apporximation of cusp
 using Distributed
 include("..\\..\\strong coupling\\constants.jl")
 include("..\\..\\strong coupling\\alpha_s.jl")
@@ -27,29 +28,34 @@ end
     return 4^4*Γ3
 end
 
+@everywhere function Γ4_func(nf)
+    return 0.21 # 0.21+-0.17 @ nf=5
+end
+
 @everywhere function Γ_func(; αs::Float64, order::Int64, nf::Int64)
 
     Γ0 = Γ0_func(nf)
     Γ1 = Γ1_func(nf)
     Γ2 = Γ2_func(nf)
-    Γ3 = Γ3_func(nf)    
+    Γ3 = Γ3_func(nf)
+    Γ4 = Γ4_func(nf)    
 
     order1 = αs/(4π) * Γ0
     order2 = (αs/(4π))^2 * Γ1
     order3 = (αs/(4π))^3 * Γ2
     order4 = (αs/(4π))^4 * Γ3
+    order5 = (αs/(4π))^5 * Γ4
 
     if order == 1 
         total = order1
-    end
-    if order == 2  
+    elseif order == 2  
         total = order1 + order2
-    end
-    if order == 3 
+    elseif order == 3 
         total = order1 + order2 + order3
-    end
-    if order == 4 
+    elseif order == 4 
         total = order1 + order2 + order3 + order4
+    elseif order == 5 
+        total = order1 + order2 + order3 + order4 + order5
     end    
 
     return total
@@ -58,29 +64,30 @@ end
 
 @everywhere function Γ_final(; μ::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
 
-    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
+    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
 
     Γ0 = Γ0_func(nf)
     Γ1 = Γ1_func(nf)
     Γ2 = Γ2_func(nf)
-    Γ3 = Γ3_func(nf)    
+    Γ3 = Γ3_func(nf)
+    Γ4 = Γ4_func(nf)    
 
     order1 = αs/(4π) * Γ0
     order2 = (αs/(4π))^2 * Γ1
     order3 = (αs/(4π))^3 * Γ2
     order4 = (αs/(4π))^4 * Γ3
+    order5 = (αs/(4π))^5 * Γ4
 
     if order == 1 
         total = order1
-    end
-    if order == 2  
+    elseif order == 2  
         total = order1 + order2
-    end
-    if order == 3 
+    elseif order == 3 
         total = order1 + order2 + order3
-    end
-    if order == 4 
+    elseif order == 4 
         total = order1 + order2 + order3 + order4
+    elseif order == 5 
+        total = order1 + order2 + order3 + order4 + order5
     end    
 
     return total

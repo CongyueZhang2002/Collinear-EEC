@@ -6,6 +6,7 @@ using HCubature
 include("..\\..\\strong coupling\\constants.jl")
 include("..\\..\\strong coupling\\alpha_s.jl")
 include("..\\cusp\\cusp.jl")
+include("gammav.jl")
 
 # Soft
 
@@ -40,80 +41,72 @@ end
     return γS2
 end
 
-@everywhere function γS_func(; αs::Float64, order::Int64, nf::Int64)
+@everywhere function γS3_func(nf)
 
-    γS0 = γS0_func(nf) 
-    γS1 = γS1_func(nf)
-    γS2 = γS2_func(nf) 
+    γν3 = γν3_func(nf)
 
-    order1 = αs/(4π) * γS0
-    order2 = (αs/(4π))^2 * γS1
-    order3 = (αs/(4π))^3 * γS2
+    γS3 = 4 * (
+          CF^2*CF*nf * z2 
+        + CF*nf^3 * (8/81*z2 - 880/243*z3 - 52/27*z4 + 256/6561) 
+        + CA*CF*nf^2 * (56/9*z3*z2 + 5353/1458*z2 + 616/243*z3 - 26*z4 + 136/9*z5 + 166639/2187) 
+        + CA*CF*CF*nf * (88/3*z3*z2 - 539/9*z2 + 16016/81*z3 + 1394/9*z4 + 1232/9*z5 - 528269/972) 
+        + CA^3*CF * (7480/9*z3^2 + 242/9*z2*z3 - 486706/243*z3 - 1273/729*z2 - 128191/54*z4 - 2662/9*z5 + 48499/27*z6 + 66247055/26244) 
+        + CF*CF*nf^2 * (-16/3*z3*z2 + 86/9*z2 - 2912/81*z3 - 152/9*z4 - 224/9*z5 + 46663/486) 
+        + CA^2*CF*nf * (-1360/9*z3^2 - 352/9*z2*z3 + 111724/243*z3 - 48257/1458*z2 + 2017/3*z4 - 88/3*z5 - 8818/27*z6 - 648094/729)
+    ) + γν3
+
+    return γS3
+end
+
+@everywhere function γS0_tilde(nf)
+    return -γS0_func(nf)
+end
+
+@everywhere function γS1_tilde(nf)
+    return -γS1_func(nf)
+end
+
+@everywhere function γS2_tilde(nf)
+    return -γS2_func(nf)
+end
+
+@everywhere function γS3_tilde(nf)
+    return -γS3_func(nf)
+end
+
+@everywhere function γS_tilde(; αs::Float64, order::Int64, nf::Int64)
+
+    γS0_t = γS0_tilde(nf) 
+    γS1_t = γS1_tilde(nf)
+    γS2_t = γS2_tilde(nf)
+    γS3_t = γS3_tilde(nf) 
+
+    order1 = αs/(4π) * γS0_t
+    order2 = (αs/(4π))^2 * γS1_t
+    order3 = (αs/(4π))^3 * γS2_t
+    order4 = (αs/(4π))^4 * γS3_t
 
     if order == 1 
         total = order1
-    end
-    if order == 2  
+    elseif order == 2  
         total = order1 + order2
-    end
-    if order == 3 
+    elseif order == 3 
         total = order1 + order2 + order3
+    elseif order == 4 
+        total = order1 + order2 + order3 + order4
     end
 
     return total
-
 end
 
-# final γS in integration
-@everywhere function γS_final(; μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
-
-    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-    Γ = Γ_func(αs=αs, order=order+1, nf=nf)
-    γS = -γS_func(αs=αs, order=order, nf=nf)
-
-    γS_f = 4*Γ*log(μ/ν) + γS
-    
-    return γS_f
-end
-
-#@everywhere function log_αs(; αs_μi::Float64, αs_μf::Float64, order::Int64, nf::Int64)
+#numerical integration
+#@everywhere function γS_final(; μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
 #
-#    β0 = β0_func(nf)
-#    β1 = β1_func(nf)
-#    β2 = β2_func(nf)
-#    β3 = β3_func(nf)
-
-#    β_1(x) = 1/(-2*x[1]*(x[1]/(4π)*β0))
-#    β_2(x) = 1/(-2*x[1]*(x[1]/(4π)*β0 + (x[1]/(4π))^2*β1))
-#    β_3(x) = 1/(-2*x[1]*(x[1]/(4π)*β0 + (x[1]/(4π))^2*β1 + (x[1]/(4π))^3*β2))
-#    β_4(x) = 1/(-2*x[1]*(x[1]/(4π)*β0 + (x[1]/(4π))^2*β1 + (x[1]/(4π))^3*β2 + (x[1]/(4π))^4*β3))
-
-#    if order == 1 
-#        integral, error = hcubature(β_1, [αs_μi], [αs_μf])
-#    end
-#    if order == 2 
-#        integral, error = hcubature(β_2, [αs_μi], [αs_μf])
-#    end
-#    if order == 3 
-#        integral, error = hcub\siature(β_3, [αs_μi], [αs_μf])
-#    end
-#    if order == 4 
-#        integral, error = hcubature(β_4, [αs_μi], [αs_μf])
-#    end
-    
-#    return integral
-#end
-
-#@everywhere function γS_semi(; αs_μ::Float64, ν::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+#    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
+#    Γ = Γ_func(αs=αs, order=order+1, nf=nf)
+#    γS = γS_tilde(αs=αs, order=order, nf=nf)
 #
-#    αs_ν = alpha_s_func(μf=ν, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
-#
-#    Γ = Γ_func(αs=αs_μ, order=order+1, nf=nf)
-#    γS = -γS_func(αs=αs_μ, order=order, nf=nf)
-#
-#    log_term = log_αs(αs_μi=αs_ν, αs_μf=αs_μ, order=order, nf=nf)
-#
-#    γS_f = 4*Γ*log_term + γS
+#    γS_f = 4*Γ*log(μ/ν) + γS
 #    
 #    return γS_f
 #end

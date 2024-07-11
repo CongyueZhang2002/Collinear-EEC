@@ -1,4 +1,6 @@
 # non-cusp anomalous dimension up to 3 loops from https://arxiv.org/abs/1909.00811
+# 4 loop https://arxiv.org/pdf/2205.02249
+# numerical https://arxiv.org/pdf/1912.12920 eqn(3.12); checked and proved γB, γS are correct from 1-4 loops
 
 using Distributed
 include("..\\..\\strong coupling\\constants.jl")
@@ -45,34 +47,85 @@ end
     return γB2
 end
 
-@everywhere function γB_func(; αs::Float64, order::Int64, nf::Int64)
+@everywhere function γB0_tilde(nf)
 
-    γB0 = γB0_func(nf)    
+    γB0 = γB0_func(nf)
+    γS0 = γS0_func(nf)
+
+    γB0_t = γB0 + γS0
+
+    return γB0_t
+end
+
+@everywhere function γB1_tilde(nf)
+
     γB1 = γB1_func(nf)
-    γB2 = γB2_func(nf) 
+    γS1 = γS1_func(nf)
 
-    order1 = αs/(4π) * γB0
-    order2 = (αs/(4π))^2 * γB1
-    order3 = (αs/(4π))^3 * γB2
+    γB1_t = γB1 + γS1
+
+    return γB1_t
+end
+
+@everywhere function γB2_tilde(nf)
+
+    γB2 = γB2_func(nf)
+    γS2 = γS2_func(nf)
+
+    γB2_t = γB2 + γS2
+
+    return γB2_t
+end
+
+@everywhere function γB3_tilde(nf)
+
+    γB3_t = 2 * (
+          bdFA*dFAdn
+        + CA^3*CF * (-bdFA/24 - 371201/648 + 528*z3^2 + (8*z4 - 153670/81)*z3 - 11194/27*z4 + 6046/9*z6 + 11372/9*z5 + 472/3*z3*z2 + 504*z5*z2 + 4582/3*z2 - 2870*z7) 
+        + nf*CA^2*CF * (-1/2*bNCACF2 - 1/4*bNCF3 - bdFF/48 - 16/3*z3^2 - 248/3*z5 - 137/9*z3 + 16186/27*z4 + (-584/9*z3 - 85175/162)*z2 - 144*z6 + 353/3) 
+        + nf*CA*CF^2 * bNCACF2
+        + nf*CF^3 * bNCF3
+        + nf^2*CA*CF * (-320/9*z3 - 88/9*z5 - 80/9*z4 + (80/3*z3 + 3170/81)*z2 - 193/54)
+        + nf^2*CF^2 * (-2104/27*z4 + 56/27*z3 + 368/9*z5 - 160/9*z3*z2 + 1244/27*z2 - 188/27) 
+        + CA*CF^3 * (-2085/4 + 3220*z3^2 + (128*z4 - 3260)*z3 + 79297/18*z6 + 2167*z4 - 976*z5 + z2*(-1988/3*z3 + 2064*z5 + 1167) - 10920*z7) 
+        + CF^2*CA^2 * (29639/36 - 7102/3*z3^2 + (129662/27 - 32*z4)*z3 + 5354/9*z5 - 60850/27*z4 - 5497/2*z6 + z2*(2096/9*z3 - 2104*z5 - 46771/27) + 8610*z7) 
+        + bdFF*nf*dFFdn
+        + CF*nf^3 * (-32/27*z4 + 32/81*z2 + 304/81*z3 - 131/81)
+        + CF^4 * (-1152*z3^2 + 64*z4*z3 + 2004*z3 - 342*z4 + z2*(-120*z3 - 384*z5 - 450) - 2520*z5 - 2111*z6 + 5880*z7 + 4873/24)
+    )
+
+    return γB3_t
+end
+
+@everywhere function γB_tilde(; αs::Float64, order::Int64, nf::Int64)
+
+    γB0_t = γB0_tilde(nf)    
+    γB1_t = γB1_tilde(nf)
+    γB2_t = γB2_tilde(nf)
+    γB3_t = γB3_tilde(nf)  
+
+    order1 = αs/(4π) * γB0_t
+    order2 = (αs/(4π))^2 * γB1_t
+    order3 = (αs/(4π))^3 * γB2_t
+    order4 = (αs/(4π))^4 * γB3_t
 
     if order == 1 
         total = order1
-    end
-    if order == 2  
+    elseif order == 2  
         total = order1 + order2
-    end
-    if order == 3 
+    elseif order == 3 
         total = order1 + order2 + order3
+    elseif order == 4 
+        total = order1 + order2 + order3 + order4
     end
 
     return total
-
 end
 
-# final γJ in integration
+# numerical integration
 #@everywhere function γJ_final(; μ::Float64, νdQ::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
 #
-#    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order+1, nf=nf)
+#    αs = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
 #    Γ = Γ_func(αs=αs, order=order+1, nf=nf)
 #    γJ = γB_func(αs=αs, order=order, nf=nf) + γS_func(αs=αs, order=order, nf=nf)
 #

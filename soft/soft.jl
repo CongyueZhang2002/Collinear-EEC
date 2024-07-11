@@ -75,10 +75,6 @@ end
 # rapidity anomalous dimensions
 @everywhere function γr0_func(nf)
 
-    #γs0 = γs0_thre_func(nf)
-
-    #γr0 = γs0
-
     γr0 = 0
 
     return γr0
@@ -86,30 +82,12 @@ end
 
 @everywhere function γr1_func(nf)
 
-    #cs1 = cs1_func(nf)
-
-    #β0 = β0_func(nf) 
-
-    #γs1 = γs1_thre_func(nf)
-    
-    #γr1 = γs1 - β0*cs1
-
     γr1 = CF*CA * (28*z3 - 808/27) + 112*CF*nf/27
 
     return γr1
 end
 
 @everywhere function γr2_func(nf)
-
-    #cs1 = cs1_func(nf)
-    #cs2 = cs2_func(nf)
-
-    #β0 = β0_func(nf) 
-    #β1 = β1_func(nf) 
-
-    #γs2 = γs2_thre_func(nf)
-
-    #γr2 = γs2 - 2*β0*cs2 - β1*cs1 + 2*CF*CA*β0*z4
     
     γr2 = (
         CF*CA^2 * (-176/3*z3*z2 + 6392*z2/81 + 12328*z3/27 + 154*z4/3 - 192*z5 - 297029/729)
@@ -203,11 +181,9 @@ end
 
     if order == 1 
         total = (αs/4π)*S1
-    end
-    if order == 2  
+    elseif order == 2  
         total = (αs/4π)*S1 + (αs/4π)^2*S2
-    end
-    if order == 3 
+    elseif order == 3 
         total = (αs/4π)*S1 + (αs/4π)^2*S2 + (αs/4π)^3*S3
     end
 

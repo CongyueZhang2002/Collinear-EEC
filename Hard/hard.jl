@@ -29,7 +29,6 @@ function γ2H_func(nf)
     return γ2H
 end
 
-
 function c1H_func(nf) 
 
     c1H = CF*(-16 + 7*π^2/3)
@@ -132,11 +131,9 @@ end
 
     if order == 1 
         total = 1 + (αs/4π)*H1
-    end
-    if order == 2  
+    elseif order == 2  
         total = 1 + (αs/4π)*H1 + (αs/4π)^2*H2
-    end
-    if order == 3 
+    elseif order == 3 
         total = 1 + (αs/4π)*H1 + (αs/4π)^2*H2 + (αs/4π)^3*H3
     end
 

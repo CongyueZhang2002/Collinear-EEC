@@ -54,15 +54,14 @@ end
 
 function SCET_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
 
-    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
+    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
 
     sigma1 = sigma1_func(z)
     sigma2 = sigma2_func(z,nf)
 
     if order == 1 
         total = (αs/(4π))*sigma1
-    end
-    if order == 2 
+    elseif order == 2 
         total = (αs/(4π))*sigma1 + (αs/(4π))^2*sigma2
     end
 

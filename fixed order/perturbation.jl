@@ -306,7 +306,7 @@ end
 
 function perturbation_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
 
-    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
+    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
 
     β0 = β0_func(nf)
 
@@ -322,8 +322,7 @@ function perturbation_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::F
 
     if order == 1 
         total = order1
-    end
-    if order == 2 
+    elseif order == 2 
         total = order1 + order2
     end
 
