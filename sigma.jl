@@ -142,7 +142,7 @@ using SpecialFunctions
         μJ = μJ_ratio * b0/bstar
         νJ = νJ_ratio * Q
         μS = μS_ratio * b0/bstar
-        νS = νS_ratio * b0/b
+        νS = νS_ratio * b0
         μH = μH_ratio * Q
         
         μf = μS # μf is the μ
@@ -165,7 +165,7 @@ using SpecialFunctions
         γν_Integral = Integral_ν_analytic(b=b, μf=μf, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=RES_order, nf=nf, bmax=bmax)
 
-        NP_Sudakov = 1.0 #NP(b=b, parameters=parameters)
+        NP_Sudakov = NP(b=b, parameters=parameters)
 
         total = Q^2/4*b*J0*J*J*S*exp(γH_Integral+2*γJ_Integral)*(νJ/νS)^γν_Integral*NP_Sudakov
 
@@ -183,6 +183,12 @@ using SpecialFunctions
         return H
     end
 
+    function R_ratio(; Q::Float64, μ_ini::Float64, αs_ini::Float64, nf::Int64)
+        αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
+        r = 1 + αs/π + (αs/(4π))^2*(CF*CA*(123/2-44*z3) + CF*TF*nf*(-22+16*z3) - CF^2*3/2)
+        return r
+    end
+    
     function sigma_z(; Q::Float64, z::Float64, μ_ini::Float64, αs_ini::Float64, nf::Int64, XLL::String,
                     μH_ratio::Float64, μJ_ratio::Float64, νJ_ratio::Float64, 
                     μS_ratio::Float64, νS_ratio::Float64, bmax_ratio::Float64,
@@ -201,7 +207,9 @@ using SpecialFunctions
         μ_ren = μ_ren_ratio * Q
         renormalon = renormalon_MS_func(z=z, Q=Q, μ_ren=μ_ren, μ_ini=μ_ini, αs_ini=αs_ini, order=2, nf=nf, Ω1=Ω1) 
 
-        total = hard*integral + renormalon
+        r = R_ratio(Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf)
+
+        total = (hard*integral + renormalon)/r
 
         return total
     end

@@ -12,49 +12,54 @@ include("constants.jl")
 # nf: active quarks
 
 @everywhere function β0_func(nf) 
-    value = (
-      11 
-    - 0.666666*nf
-    )
-    return value
+    #value = (
+    #  11 
+    #- 0.666666*nf
+    #)
+    #return value
+    return 7.66667
 end
 
 @everywhere function β1_func(nf) 
-    value = (
-      102 
-    - 12.6667*nf
-    )
-    return value
+    #value = (
+    #  102 
+    #- 12.6667*nf
+    #)
+    #return value
+    return 38.6665
 end
 
 @everywhere function β2_func(nf)
-    value = (
-      1428.5 
-    - 279.611*nf 
-    + 6.01852*nf^2
-    )
-    return value
+    #value = (
+    #  1428.5 
+    #- 279.611*nf 
+    #+ 6.01852*nf^2
+    #)
+    #return value
+    return 180.908
 end
 
 @everywhere function β3_func(nf)
-    value = (
-      29243.0 
-    - 6946.29*nf
-    + 405.089*nf^2
-    + 1.49931*nf^3
-    )
-    return value
+    #value = (
+    #  29243.0 
+    #- 6946.29*nf
+    #+ 405.089*nf^2
+    #+ 1.49931*nf^3
+    #)
+    #return value
+    return 4826.18
 end
-   
+
 @everywhere function β4_func(nf)
-    value = (
-      537148
-    - 186162*nf
-    + 17567.8*nf^2
-    − 231.278*nf^3
-    − 1.84247*nf^4
-    )
-    return value
+    #value = (
+    #  537148
+    #- 186162*nf
+    #+ 17567.8*nf^2
+    #− 231.278*nf^3
+    #− 1.84247*nf^4
+    #)
+    #return value
+    return 15471.7
 end
 
 function β_func(; αs::Float64, order::Int64, nf::Int64)

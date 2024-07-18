@@ -22,9 +22,10 @@ end
     #β0 = β0_func(nf) # different convention 1/4π vs 1/π
     #γν1 = 2CF * (CA*(-64/9 + 28z3) - β0*56/9)
 
-    γν1 = 4*(7.46333 + 2.76543*nf)
+    #γν1 = 4*(7.46333 + 2.76543*nf)
 
-    return γν1
+    #return γν1
+    return 85.1619
 end
 
 @everywhere function γν2_func(nf)
@@ -38,16 +39,18 @@ end
     #    + β1 * (-1711/54 + 152/9*z3 + 8z4)
     #)
 
-    γν2 = 4*(70.068 + 77.1286*nf - 4.54662*nf^2)
+    #γν2 = 4*(70.068 + 77.1286*nf - 4.54662*nf^2)
 
-    return γν2
+    #return γν2
+    return 1368.18
 end
 
 @everywhere function γν3_func(nf)
 
-    γν3 = 4*(- 350.8 + 2428*nf - 378.3*nf^2 + 8.072*nf^3)
+    #γν3 = 4*(- 350.8 + 2428*nf - 378.3*nf^2 + 8.072*nf^3)
 
-    return γν3
+    #return γν3
+    return 13362.8
 end
 
 @everywhere function γν_raw(; αs::Float64, order::Int64, nf::Int64)

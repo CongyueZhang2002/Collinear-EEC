@@ -1,5 +1,6 @@
 include("perturbation.jl")
 include("SCET.jl")
+include("../sigma.jl")
 
 function non_singular_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
 
@@ -43,7 +44,9 @@ function non_singular_sigma_χ(; χ::Float64, Q::Float64, μ_ini::Float64, αs_i
 
     part = non_singular_func(z=z, Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf)
 
-    total = 0.5*sin(χ)*part
+    r=R_ratio(Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, nf=nf)
+
+    total = 0.5*sin(χ)*part/r
 
     return total
 end

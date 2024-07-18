@@ -6,45 +6,50 @@ include("..\\strong coupling\\alpha_s.jl")
 
 function γ0H_func(nf)
 
-    γ0H = -6*CF
+    #γ0H = -6*CF
 
-    return γ0H
+    #return γ0H
+    return -8.0
 end
 
 function γ1H_func(nf)
 
-    γ1H=(
-          CF^2 * (-3 + 4*π^2 - 48*z3) 
-        + CF*CA * (-961/27 - 11*π^2/3 + 52*z3) 
-        + CF*TF*nf * (260/27 + 4*π^2/3)
-    )
-
-    return γ1H
+    #γ1H=(
+    #      CF^2 * (-3 + 4*π^2 - 48*z3) 
+    #    + CF*CA * (-961/27 - 11*π^2/3 + 52*z3) 
+    #    + CF*TF*nf * (260/27 + 4*π^2/3)
+    #)
+    
+    #return γ1H
+    return 1.14231
 end
 
 function γ2H_func(nf)
 
-    γ2H= (-1.856*nf^2 + 259.3*nf - 1499)
+    #γ2H= (-1.856*nf^2 + 259.3*nf - 1499)
 
-    return γ2H
+    #return γ2H
+    return -248.9
 end
 
 function c1H_func(nf) 
 
-    c1H = CF*(-16 + 7*π^2/3)
+    #c1H = CF*(-16 + 7*π^2/3)
 
-    return c1H
+    #return c1H
+    return 9.37210
 end
 
 function c2H_func(nf) 
 
-    c2H = (
-          CF^2 * (511/4 - 83*π^2/3 + 67*π^4/30 - 60*z3) 
-        + CF*CA * (-51157/324 + 1061*π^2/54 - 8*π^4/45 + 626*z3/9) 
-        + CF*TF*nf * (4085/81 - 182*π^2/27 + 8*z3/9)
-    )
+    #c2H = (
+    #      CF^2 * (511/4 - 83*π^2/3 + 67*π^4/30 - 60*z3) 
+    #    + CF*CA * (-51157/324 + 1061*π^2/54 - 8*π^4/45 + 626*z3/9) 
+    #    + CF*TF*nf * (4085/81 - 182*π^2/27 + 8*z3/9)
+    #)
 
-    return c2H    
+    #return c2H
+    return 359.391   
 end
 
 @everywhere function H1_func(L,nf) 
