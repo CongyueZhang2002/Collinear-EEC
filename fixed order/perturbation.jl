@@ -223,7 +223,7 @@ function Bnlc_func(z)
     return value
 end    
 
-print(Bnlc_func(0.5))
+#print(Bnlc_func(0.5))
 
 function BNf_func(z)
 
@@ -342,6 +342,35 @@ function perturbation_sigma_χ(; χ::Float64, Q::Float64, μ_ini::Float64, αs_i
 
 end
 
+function EEC_renormalon_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+    
+    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
+
+    β0 = β0_func(nf) 
+    
+    order1 = (αs*β0/(4π))*2
+    order2 = (αs*β0/(4π))^2*4*(1+5/6)
+
+    if order == 1 
+        total = order1
+    elseif order == 2 
+        total = order1 + order2
+    end
+
+    return total*4*CF/(π*β0)/(z*(1-z))^1.5
+end
+
+function EEC_renormalon_sigma_χ(; χ::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+
+    z = 0.5*(1-cos(χ))
+
+    part = EEC_renormalon_func(z=z, Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf)
+
+    total = 0.5*sin(χ)*part
+
+    return total
+
+end
 #------------------------------------------
 
 #function Blc_to1_func(z) 
@@ -400,7 +429,7 @@ end
 
 #function perturbation_to1_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
 #
-#    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
+#    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
 #
 #    A = A1_func(z)
 #    Blc = Blc_to1_func(z)

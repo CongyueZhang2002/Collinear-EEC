@@ -127,11 +127,54 @@ end
     return total
 end
 
+@everywhere function η_integral_pert(; μi::Float64, μf::Float64, 
+                      F0::Float64, F1::Float64, F2::Float64, F3::Float64, F4::Float64,
+                      αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
+
+    β0 = β0_func(nf)
+    β1 = β1_func(nf)   
+    β2 = β2_func(nf)   
+    β3 = β3_func(nf)
+    β4 = β4_func(nf)    
+
+    αs_i = alpha_s_func_pert(μf=μi, μi=μ_ini, αs=αs_ini, order=4,nf=nf)
+    αs_f = alpha_s_func_pert(μf=μf, μi=μ_ini, αs=αs_ini, order=4,nf=nf)
+
+    r = αs_f/αs_i
+    B2 = β1^2/β0^2 - β2/β0
+    B3 = -β1^3/β0^3 + 2*β1*β2/β0^2 - β3/β0
+    B4 = β1^4/β0^4 - (3*β1^2*β2)/β0^3 + β2^2/β0^2 + (2*β1*β3)/β0^2 - β4/β0 
+
+    η0 = - F0/(2β0)*log(r)
+
+    η1 = - F0/(2β0)*αs_i/(4π)*(F1/F0 - β1/β0)*(r-1)
+
+    η2 = - F0/(2β0)*(αs_i/(4π))^2*(B2 - F1*β1/(F0*β0) + F2/F0)*(r^2-1)/2  
+
+    η3 = - F0/(2β0)*(αs_i/(4π))^3*(B3 + F1/F0*B2 - F2*β1/(F0*β0) + F3/F0)*(r^3-1)/3    
+
+    η4 = - F0/(2β0)*(αs_i/(4π))^4*(B4 + F1/F0*B3 + F2/F0*B2 - F3*β1/(F0*β0) + F4/F0)*(r^4-1)/4
+
+    if order == 1 
+        total = η0
+    elseif order == 2  
+        total = η0 + η1
+    elseif order == 3 
+        total = η0 + η1 + η2
+    elseif order == 4
+        total = η0 + η1 + η2 + η3
+    elseif order == 5
+        total = η0 + η1 + η2 + η3 + η4
+    end    
+
+    return total
+end
+
 #TEST
 
 function KΓ_Integrand(; μ::Float64, Q::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64)
 
-    αs_μ = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
+    αs_μ = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
 
     Γ = Γ_func(αs=αs_μ, order=order+1, nf=nf)
     

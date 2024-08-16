@@ -1,7 +1,8 @@
 # Renormalon https://arxiv.org/pdf/2305.19311 (currently nf=5)
-
+using HCubature
 include("strong coupling\\alpha_s.jl")
 include("strong coupling\\constants.jl")
+include("fixed order/perturbation.jl")
 
 function d1_func(μ,R,nf) 
     value = -8.357
@@ -106,7 +107,8 @@ function renormalon_func(; z::Float64, Q::Float64, μ_ren::Float64, μ_ini::Floa
     δR0 = δR0_func(μ_ren=μ_ren, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf)
     Ω_Integral = Ω_Integral_func(μ_ren=μ_ren, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf)
 
-    total = (ΣR + Ω1 - δR0 - Ω_Integral)/(2*Q*(z*(1-z))^1.5)
+    #total = (ΣR + Ω1 - δR0 - Ω_Integral)/(2*Q*(z*(1-z))^1.5)
+    total = (ΣR- Ω_Integral)/(2*Q*(z*(1-z))^1.5)
 
     return total
 
@@ -119,3 +121,57 @@ function renormalon_MS_func(; z::Float64, Q::Float64, μ_ren::Float64, μ_ini::F
     return total
 
 end
+
+function EEC_MSR_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+
+    pert = perturbation_func(z=z, Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf)
+    renormalon = renormalon_func(z=z, Q=Q, μ_ren=Q, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf, Ω1=0.0) 
+    return pert+renormalon
+    
+end
+
+function EEC_MSR_sigma_χ(; χ::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+
+    z = 0.5*(1-cos(χ))
+
+    part = EEC_MSR_func(z=z, Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf)
+
+    total = 0.5*sin(χ)*part
+
+    return total
+
+end
+
+function test_func(; μ_ren::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+
+    R1 = μ_ren
+    μ = μ_ren
+
+    γR0 = γR0_func(nf)
+    γR1 = γR1_func(nf)
+
+    R_max = [R1]
+    R_min = [R0]
+
+    f1(x) = alpha_s_func(μf=x[1], μi=μ_ini, αs=αs_ini, order=4, nf=nf)/(4π)
+    integral1, error1 = hcubature(f1, R_min, R_max)
+
+    f2(x) = (alpha_s_func(μf=x[1], μi=μ_ini, αs=αs_ini, order=4, nf=nf)/(4π))^2
+    integral2, error2 = hcubature(f2, R_min, R_max)
+
+    order1 = integral1
+    order2 = integral2
+
+    if order == 1 
+        total = order1
+    end
+    if order == 2 
+        total = order2
+    end
+
+    return total
+
+end
+#a=Ω_Integral_func(μ_ren=91.2, μ_ini=91.2, αs_ini=0.118, order=2, nf=5)
+#b=ΣR_func(μ_ren=91.2, μ_ini=91.2, αs_ini=0.118, order=2, nf=5)
+#println(b-a)

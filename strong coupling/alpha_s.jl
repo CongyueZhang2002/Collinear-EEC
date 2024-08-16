@@ -100,7 +100,10 @@ end
     β3 = β3_func(nf)
 
     l = 1 + β0*αs*log(μf^2/μi^2)/(4*π)
-
+    if l < 10^(-3)
+        l = 10^(-3)
+    end
+    
     order1 = 1 
     order2 = - αs/(4π*l)*β1/β0*log(l)
     order3 = (αs/(4π*l))^2 * (
@@ -139,23 +142,52 @@ function alpha_s_func_schwartz(; μf::Float64, μi::Float64, αs::Float64, order
     order1 = αs
     order2 = - αs^2/(2π)*β0*L
     order3 = αs^3/(8*π^2)*(-β1*L+2*β0^2*L^2)
-    order4 = αs^4/(32*π^2)*(-β2*L+5*β0*β1*L^2-4*β0^3*L^3)
+    order4 = αs^4/(32*π^3)*(-β2*L+5*β0*β1*L^2-4*β0^3*L^3)
  
     if order == 1 
-        total = order1
-    end
-    if order == 2 
         total = order1 + order2
     end
-    if order == 3 
+    if order == 2 
         total = order1 + order2 + order3
     end
-    if order == 4 
+    if order == 3 
         total = order1 + order2 + order3 + order4
     end
 
     return total
 
+end
+
+function alpha_s_func_pert(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
+
+    a0 = αs/π
+    L = log(μf/μi)
+
+    β1 = -2*β0_func(nf)/4
+    β2 = -2*β1_func(nf)/4^2
+    β3 = -2*β2_func(nf)/4^3
+    β4 = -2*β3_func(nf)/4^4
+    β5 = -2*β4_func(nf)/4^5
+
+    order1 = 1 + β1*L*a0 
+    order2 = (β1^2*L^2 + β2*L)*a0^2
+    order3 = (β1^3*L^3 + 5/2*β1*β2*L^2 + β3*L)*a0^3
+    order4 = (β1^4*L^4 + 13/3*β1^2*β2*L^3 + (3/2*β2^2 + 3*β1*β3)*L^2 + β4*L)*a0^4
+    order5 = (β1^5*L^5 + 77/12*β1^3*β2*L^4 + 1/6*(35*β1*β2^2 + 36*β1^2*β3)*L^3 + 7/2*(β1*β4 + β2*β3)*L^2 + β5*L)*a0^5
+
+    if order == 0
+        total = order1
+    elseif order == 1 
+        total = order1 + order2
+    elseif order == 2 
+        total = order1 + order2 + order3
+    elseif order == 3 
+        total = order1 + order2 + order3 + order4
+    elseif order == 4 
+        total = order1 + order2 + order3 + order4 + order5      
+    end
+
+    return αs*total
 end
 
 function alpha_s_func_numerical(; μf::Float64, μi::Float64, αs::Float64, order::Int64)

@@ -7,8 +7,8 @@ function NP(; b::Float64, Q::Float64, bmax::Float64, parameters::Vector{Float64}
     elseif length(a)==1
         NP = exp(-0.5*a[1]*b^2)
     elseif length(a)==2
-        #NP = exp(-0.5*a[1]*b^2)*(1-2*a[2]*b)
-        NP = exp(-0.5*a[1]*b^2+a[2]*b) 
+        NP = exp(-0.5*a[1]*b^2)*(1-2*a[2]*b)
+        #NP = exp(-0.5*a[1]*b^2+a[2]*b) 
     elseif length(a)==3
         NP = exp(-0.5*a[1]*b^2+a[2]*b+a[3]*b^0.5) 
     end  
@@ -90,11 +90,11 @@ function NP_new(; b::Float64, Q::Float64, μJ::Float64, νdQ::Float64, αs::Floa
         2/3 - LΛ 
 
     if order == 1 
-        total = J0 + J1 + g2*b^2*C
+        total = J0 + J1 + a*g2*b^2#*C
     elseif order == 2  
-        total = J0 + J1 + J2 + g2*b^2*C
+        total = J0 + J1 + J2 + a*g2*b^2#*C
     elseif order == 3 
-        total = J0 + J1 + J2 + J3 + g2*b^2*C
+        total = J0 + J1 + J2 + J3 + a*g2*b^2#*C
     end
 
     return total

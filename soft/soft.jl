@@ -189,11 +189,86 @@ end
     S3 = S3_func(Lb,Lr,nf)
 
     if order == 1 
-        total = (αs/4π)*S1
+        total = (αs/4π)*S1 
     elseif order == 2  
         total = (αs/4π)*S1 + (αs/4π)^2*S2
     elseif order == 3 
         total = (αs/4π)*S1 + (αs/4π)^2*S2 + (αs/4π)^3*S3
+    end
+
+    return exp(total)
+end
+
+@everywhere function S_func_NP(; b::Float64, μS::Float64, νS::Float64, αs::Float64, order::Int64, nf::Int64, gs::Float64)
+
+    Lb = log((b*μS/b0)^2)
+    Lr = log((b*νS/b0)^2)
+
+    S1 = S1_func(Lb,Lr,nf)
+    S2 = S2_func(Lb,Lr,nf)
+    S3 = S3_func(Lb,Lr,nf)
+
+    if order == 1 
+        total = (αs/4π)*S1 + 0.5*gs*b^2*Lr
+    elseif order == 2  
+        total = (αs/4π)*S1 + (αs/4π)^2*S2 + 0.5*gs*b^2*Lr
+    elseif order == 3 
+        total = (αs/4π)*S1 + (αs/4π)^2*S2 + (αs/4π)^3*S3 + 0.5*gs*b^2*Lr
+    end
+
+    return exp(total)
+end
+
+@everywhere function S_renormalon_func(; b::Float64, μS::Float64, νS::Float64, αs::Float64, order::Int64, nf::Int64)
+
+    Lb = log((b*μS/b0)^2)
+    Lr = log((b*νS/b0)^2)
+
+    S1 = S1_func(Lb,Lr,nf)
+    S2 = S2_func(Lb,Lr,nf)
+    S3 = S3_func(Lb,Lr,nf)
+
+    S_r_1 = (αs/4π)^2*(
+            -79.3264 - 63.6049*Lr - 3.65458*Lb - 68.1481*Lr*Lb + 34.07407*Lb^2 - 20.4444*Lr*Lb^2 + 
+            6.81481*Lb^3
+            )
+
+    S_r_2 = (αs/4π)^3*(
+            -2267.39 - 1202.58*Lr - 1269.91*Lb - 870.781*Lr*Lb - 80.2654*Lb^2 - 522.469*Lr*Lb^2 + 
+            174.156*Lb^3 - 104.493*Lr*Lb^3 + 26.1234*Lb^4
+            )
+    
+    S_r_3 = (αs/4π)^4*(
+            -79408.5 - 24552.7*Lr - 52888.9*Lb - 22682.5*Lr*Lb - 17092.4*Lb^2 - 10013.9*Lr*Lb^2 - 
+            615.368*Lb^3 - 4005.59*Lr*Lb^3 + 1001.39*Lb^4 - 600.839*Lr*Lb^4 + 120.167*Lb^5
+            )
+    
+    S_r_4 = (αs/4π)^5*(
+            -3.19047*10^6 - 721809*Lr - 2.41694*10^6*Lb - 732808*Lr*Lb - 821035*Lb^2 - 
+            347799*Lr*Lb^2 - 174723*Lb^3 - 102365*Lr*Lb^3 - 4717.82*Lb^4 - 30709.5*Lr*Lb^4 + 
+            6141.91*Lb^5 - 3685.14*Lr*Lb^5 + 614.191*Lb^6
+            )
+
+    S_r_5 = (αs/4π)^6*(
+            -1.50262*10^8 - 2.81369*10^7*Lr - 1.22147*10^8*Lb - 2.77152*10^7*Lr*Lb - 4.63019*10^7*Lb^2 - 
+            1.40454*10^7*Lr*Lb^2 - 1.04910*10^7*Lb^3 - 4.44409*10^6*Lr*Lb^3 - 1.67442*10^6*Lb^4 - 
+            981000*Lr*Lb^4 - 36169.9*Lb^5 - 235440*Lr*Lb^5 + 39240.0*Lb^6 - 23544.0*Lr*Lb^6 + 
+            3363.42*Lb^7
+            )
+
+    S_r_6 = (αs/4π)^7*(
+            -8.22899*10^9 - 1.29758*10^9*Lr - 6.91184*10^9*Lb - 1.29481*10^9*Lr*Lb - 2.80912*10^9*Lb^2 - 
+            6.37450*10^8*Lr*Lb^2 - 7.09962*10^8*Lb^3 - 2.15364*10^8*Lr*Lb^3 - 1.20646*10^8*Lb^4 - 
+            5.11071*10^7*Lr*Lb^4 - 1.54047*10^7*Lb^5 - 9.02520*10^6*Lr*Lb^5 - 277303*Lb^6 - 
+            1.80504*10^6*Lr*Lb^6 + 257862*Lb^7 - 154717*Lr*Lb^7 + 19339.7*Lb^8
+            )
+
+    if order == 1 
+        total = (αs/4π)*S1 + S_r_1 + S_r_2 + S_r_3 + S_r_4 + S_r_5 + S_r_6
+    elseif order == 2  
+        total = (αs/4π)*S1 + (αs/4π)^2*S2 + S_r_2 + S_r_3 + S_r_4 + S_r_5 + S_r_6
+    elseif order == 3 
+        total = (αs/4π)*S1 + (αs/4π)^2*S2 + (αs/4π)^3*S3 + S_r_3 + S_r_4 + S_r_5 + S_r_6
     end
 
     return exp(total)

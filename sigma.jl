@@ -99,13 +99,13 @@ using SpecialFunctions
     function Integral_ν_analytic(; b::Float64, μf::Float64, αs_ini::Float64, μ_ini::Float64, order::Int64, nf::Int64, bmax::Float64)
 
         bstar = b/(1+(b/bmax)^2)^0.5
-    
         μ0 = b0/bstar
-    
+
         αs_μ0 = alpha_s_func(μf=μ0, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
     
-        γν_FO = γν_func(b=b, μ0=μ0, αs=αs_μ0, order=order, nf=nf, bmax=bmax)
-        
+        #γν_FO = γν_func(b=b, μ0=μ0, αs=αs_μ0, order=order, nf=nf, bmax=bmax)
+        γν_FO = γν_renormalon_func(b=b, μ0=μ0, αs=αs_μ0, order=order, nf=nf, bmax=bmax)
+
         Γ0 = Γ0_func(nf)
         Γ1 = Γ1_func(nf)   
         Γ2 = Γ2_func(nf)   
@@ -130,7 +130,7 @@ using SpecialFunctions
 
         FO_order, RES_order = ResAcc(XLL)
 
-        if b < 1.0e-9
+        if b < 1.0e-3
             return 0.0
         end
 
@@ -142,16 +142,15 @@ using SpecialFunctions
         μJ = μJ_ratio * b0/bstar
         νJ = νJ_ratio * Q
         μS = μS_ratio * b0/bstar
-        νS = νS_ratio * b0
+        #----------------------------------------
+        νS = νS_ratio * b0/b #CHECK DIVISION BY b!
+        #----------------------------------------
         μH = μH_ratio * Q
         
         μf = μS # μf is the μ
 
         αs_J = alpha_s_func(μf=μJ, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
         αs_S = alpha_s_func(μf=μS, μi=μ_ini, αs=αs_ini, order=4, nf=nf)
- 
-        J = J_func(b=b, μJ=μJ, νdQ=νJ/Q, αs=αs_J, order=FO_order, nf=nf)
-        S = S_func(b=b, μS=μS, νS=νS, αs=αs_S, order=FO_order, nf=nf)
 
         γH_Integral = Integral_H_analytic(Q=Q, μf=μf, μH=μH, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=RES_order, nf=nf)
@@ -162,12 +161,24 @@ using SpecialFunctions
         #γS_Integral = Integral_S(νS=νS, μf=μf, μS=μS, 
         #                        αs_ini=αs_ini, μ_ini=μ_ini, order=RES_order, nf=nf)
 
-        γν_Integral = Integral_ν_analytic(b=b, μf=μf, 
+        γν_Integral = Integral_ν_numerical(b=b, μf=μf, 
                                 αs_ini=αs_ini, μ_ini=μ_ini, order=RES_order, nf=nf, bmax=bmax)
 
-        NP_Sudakov = NP(b=b, parameters=parameters)
-
+        J = J_func(b=b, μJ=μJ, νdQ=νJ/Q, αs=αs_J, order=FO_order, nf=nf)
+        S = S_renormalon_func(b=b, μS=μS, νS=νS, αs=αs_S, order=FO_order, nf=nf)
+        #S = S_func(b=b, μS=μS, νS=νS, αs=αs_S, order=FO_order, nf=nf)                         
+        NP_Sudakov = NP(b=b, Q=Q, bmax=bmax, parameters=parameters)
         total = Q^2/4*b*J0*J*J*S*exp(γH_Integral+2*γJ_Integral)*(νJ/νS)^γν_Integral*NP_Sudakov
+
+        #NP_Sudakov = NP_new(b=b, Q=Q, μJ=μJ, νdQ=νJ/Q, αs=αs_J,bmax=bmax, parameters=parameters, order=FO_order)
+        #total = Q^2/4*b*J0*S*exp(γH_Integral+2*γJ_Integral)*(νJ/νS)^γν_Integral*NP_Sudakov*NP_Sudakov
+
+        #J = J_func(b=b, μJ=μJ, νdQ=νJ/Q, αs=αs_J, order=FO_order, nf=nf)
+        #S_NP = S_func_NP(b=b, μS=μS, νS=νS, αs=αs_S, order=FO_order, nf=nf, gs=parameters[3])
+        #γν_NP = Integral_ν_numerical_NP(b=b, μf=μf, 
+        #αs_ini=αs_ini, μ_ini=μ_ini, order=RES_order, nf=nf, bmax=bmax, gs=parameters[3])                        
+        #NP_Sudakov = NP_new(b=b, Q=Q, μJ=μJ, νdQ=νJ/Q, αs=αs_J,bmax=bmax, parameters=parameters, order=FO_order)
+        #total = Q^2/4*b*J0*S_NP*exp(γH_Integral+2*γJ_Integral)*(νJ/νS)^γν_NP*NP_Sudakov*NP_Sudakov
 
         return total
     end
