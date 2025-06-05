@@ -1,60 +1,82 @@
-# jet up to 3 loops from https://arxiv.org/abs/2012.07859
+function collinear_jet(; z::Float64, x::Float64, μ::Float64, Q::Float64, 
+    μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
 
-using Distributed
-include("..\\strong coupling\\constants.jl")
+    as = alpha_s_func(μf=μ, μi=μ_ini, αs=αs_ini, order=2, nf=nf)/(4*π)
+    Lz = -log(z)-2*log(x)
 
-# jet function
+    Jq1 = -16.444444444444443
+    Jq2 = -176.0183393572608
+    Jg1 = -38.72
+    Jg2 = 181.0269818225895
 
-@everywhere function J1_func(αs,Lb,LQ,nf)
+    qL1 = -4.
+    qL2 = -11.533333333333333
+    qL3 = -30.09925925925926
+    qL4 = -128.0129135802469
+    qL5 = -641.0409872153635
+    qL6 = -3511.5755904128437
+    qL7 = -20380.953209261206
+    qL8 = -123189.8134731188
+    qL9 = -767393.6244906444
 
-    J1 = (
-        1 + (CF*αs)/π + (3*CF*Lb*αs)/(4*π) + 
-        (CF*Lb*LQ*αs)/π - (CF*π*αs)/3
-    )
+    gL1 = -9.4
+    gL2 = 14.446666666666667
+    gL3 = 8.36562962962963
+    gL4 = 6.005288888888889
+    gL5 = -36.99933241152264
+    gL6 = -413.32409094150285
+    gL7 = -3193.8450324607807
+    gL8 = -22685.515731183114
+    gL9 = -156960.49759673624
 
-    return J1
-end
+    qN1 = -16.444444444444443
+    qN2 = -112.70625665079928
+    qN3 = -728.9362049353601
+    qN4 = -4474.783338662404
+    qN5 = -29465.49297261155
+    qN6 = -200707.80484812864
+    qN7 = -1.3965377887472804*10^6
+    qN8 = -9.861081275849514*10^6
+    qN9 = -7.03851951087887*10^7
 
-@everywhere function J2_func(αs,Lb,LQ,nf)
+    gN1 = -38.72
+    gN2 = 73.51648902586295
+    gN3 = -377.9301868612589
+    gN4 = -1103.262897794063
+    gN5 = -7378.807830594015
+    gN6 = -53460.38029846972
+    gN7 = -392001.7926932766
+    gN8 = -2.883357333803179*10^6
+    gN9 = -2.124780843603333*10^7
 
-    J2 = αs^2*(
-        -0.52108 - 0.6645800000000001*Lb + 0.14776*Lb^2 - 0.26965*LQ - 0.17915*Lb*LQ + 
-        0.26456*Lb^2*LQ + 0.09006*Lb^2*LQ^2      
-    )
+    qNN2 = -176.0183393572608
+    qNN3 = -3494.5303089695185
+    qNN4 = -38488.004250181075
+    qNN5 = -376104.1656894854
+    qNN6 = -3.4269162265619566*10^6
+    qNN7 = -3.0074570254039057*10^7
+    qNN8 = -2.5761804466196218*10^8
+    qNN9 = -2.1696351203778615*10^9
 
-    return J2
-end
+    gNN2 = 181.0269818225895
+    gNN3 = -2924.6291053820387
+    gNN4 = -21691.531275329708
+    gNN5 = -199019.61061054972
+    gNN6 = -1.702499977985066*10^6
+    gNN7 = -1.4414807762989221*10^7
+    gNN8 = -1.2083474203962356*10^8
+    gNN9 = -1.003573657536384*10^9
 
-@everywhere function J3_func(αs,Lb,LQ,nf)
-
-    J3 = αs^3*(
-        -0.42938707833771267 - 1.0417604864269598*Lb - 0.434427523774156*Lb^2 + 
-        0.07577617465207752*Lb^3 - 0.08267770782339488*LQ - 0.7422117758365783*Lb*LQ - 
-        0.13930697059087566*Lb^2*LQ + 0.1565792088377247*Lb^3*LQ - 0.11444278880208449*Lb*LQ^2 + 
-        0.011493849910393553*Lb^2*LQ^2 + 0.08361508927125795*Lb^3*LQ^2 + 
-        0.01274134693657264*Lb^3*LQ^3
-    )
-
-    return J3
-end
-
-@everywhere function J_func(; b::Float64, μJ::Float64, νdQ::Float64, αs::Float64, order::Int64, nf::Int64)
-
-    Lb = log((b*μJ/b0)^2)
-    LQ = log(νdQ)
-
-    J1 = J1_func(αs,Lb,LQ,nf)
-    J2 = J2_func(αs,Lb,LQ,nf)
-    J3 = J3_func(αs,Lb,LQ,nf)
-
-    if order == 1 
-        total = J1
-    elseif order == 2  
-        total = J1 + J2
-    elseif order == 3 
-        total = J1 + J2 + J3
+    if order == 0
+        Jq = 1 + as*(qL1*Lz) + as^2*(Lz^2*qL2) + as^3*(Lz^3*qL3) + as^4*(Lz^4*qL4) + as^5*(Lz^5*qL5) + as^6*(Lz^6*qL6) + as^7*(Lz^7*qL7) + as^8*(Lz^8*qL8) + as^9*(Lz^9*qL9)
+        Jg = 1 + as*(gL1*Lz) + as^2*(Lz^2*gL2) + as^3*(Lz^3*gL3) + as^4*(Lz^4*gL4) + as^5*(Lz^5*gL5) + as^6*(Lz^6*gL6) + as^7*(Lz^7*gL7) + as^8*(Lz^8*gL8) + as^9*(Lz^9*gL9)
+    elseif order == 1
+        Jq = 1 + as*(qL1*Lz + Jq1) + as^2*(Lz^2*qL2 + Lz*qN2) + as^3*(Lz^3*qL3 + Lz^2*qN3) + as^4*(Lz^4*qL4 + Lz^3*qN4) + as^5*(Lz^5*qL5 + Lz^4*qN5) + as^6*(Lz^6*qL6 + Lz^5*qN6) + as^7*(Lz^7*qL7 + Lz^6*qN7) + as^8*(Lz^8*qL8 + Lz^7*qN8) + as^9*(Lz^9*qL9 + Lz^8*qN9)
+        Jg = 1 + as*(gL1*Lz + Jg1) + as^2*(Lz^2*gL2 + Lz*gN2) + as^3*(Lz^3*gL3 + Lz^2*gN3) + as^4*(Lz^4*gL4 + Lz^3*gN4) + as^5*(Lz^5*gL5 + Lz^4*gN5) + as^6*(Lz^6*gL6 + Lz^5*gN6) + as^7*(Lz^7*gL7 + Lz^6*gN7) + as^8*(Lz^8*gL8 + Lz^7*gN8) + as^9*(Lz^9*gL9 + Lz^8*gN9)
+    elseif order == 2
+        Jq = 1 + as*(qL1*Lz + Jq1) + as^2*(Lz^2*qL2 + Lz*qN2 + Jq2) + as^3*(Lz^3*qL3 + Lz^2*qN3 + Lz*qNN3) + as^4*(Lz^4*qL4 + Lz^3*qN4 + Lz^2*qNN4) + as^5*(Lz^5*qL5 + Lz^4*qN5 + Lz^3*qNN5) + as^6*(Lz^6*qL6 + Lz^5*qN6 + Lz^4*qNN6) + as^7*(Lz^7*qL7 + Lz^6*qN7 + Lz^5*qNN7) + as^8*(Lz^8*qL8 + Lz^7*qN8 + Lz^6*qNN8) + as^9*(Lz^9*qL9 + Lz^8*qN9 + Lz^7*qNN9)
+        Jg = 1 + as*(gL1*Lz + Jg1) + as^2*(Lz^2*gL2 + Lz*gN2 + Jg2) + as^3*(Lz^3*gL3 + Lz^2*gN3 + Lz*gNN3) + as^4*(Lz^4*gL4 + Lz^3*gN4 + Lz^2*gNN4) + as^5*(Lz^5*gL5 + Lz^4*gN5 + Lz^3*gNN5) + as^6*(Lz^6*gL6 + Lz^5*gN6 + Lz^4*gNN6) + as^7*(Lz^7*gL7 + Lz^6*gN7 + Lz^5*gNN7) + as^8*(Lz^8*gL8 + Lz^7*gN8 + Lz^6*gNN8) + as^9*(Lz^9*gL9 + Lz^8*gN9 + Lz^7*gNN9)
     end
 
-    return total
-
+    return Jq, Jg
 end
