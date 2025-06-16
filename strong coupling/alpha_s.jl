@@ -97,21 +97,24 @@ function β_func(; αs::Float64, order::Int64, nf::Int64)
 end
 
 #usual resummed one
-@everywhere function alpha_s_func(; μf::Float64, μi::Float64, αs::Float64, order::Int64, nf::Int64)
+@everywhere function alpha_s_func(μf)
+
+    order = nloops_αs
 
     β0 = β0_func(5)
     β1 = β1_func(5)
     β2 = β2_func(5)
     β3 = β3_func(5)
 
-    l = 1 + β0*αs*log(μf^2/μi^2)/(4*π)
+    μ_ini = 91.2
+    l = 1 + β0*αs_Z*log(μf^2/μ_ini^2)/(4*π)
         
     order1 = 1 
-    order2 = - αs/(4π*l)*β1/β0*log(l)
-    order3 = (αs/(4π*l))^2 * (
+    order2 = - αs_Z/(4π*l)*β1/β0*log(l)
+    order3 = (αs_Z/(4π*l))^2 * (
             (β1/β0)^2 * (log(l)^2 - log(l) + l - 1) - β2/β0 * (l - 1)
             )
-    order4 = (αs/(4π*l))^3 * (
+    order4 = (αs_Z/(4π*l))^3 * (
             (β1/β0)^3 * (-log(l)^3 + 5/2*log(l)^2 - 2*(l - 1)*log(l) - (l-1)^2/2)
             + β1*β2/β0^2 * ((l - 1)*l + (2*l - 3)*log(l))
             + β3/β0 * (1 - l^2)/2
@@ -127,9 +130,9 @@ end
         total = order1 + order2 + order3 + order4
     end
 
-        αs_final = αs/l*total
+        αs_Z_final = αs_Z/l*total
     
-    return αs_final
+    return αs_Z_final
 
 end
 

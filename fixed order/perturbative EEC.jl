@@ -59,7 +59,7 @@ function B_func(x)
     return value
 end
 
-function Bzto0_func(x, nf)
+function Bzto0_func(x)
 
     setprecision(96)
     z=BigFloat(x)
@@ -92,28 +92,42 @@ function C_func(x)
     return value
 end
 
-function perturbation_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+# https://arxiv.org/pdf/1708.04093
+function perturbation_func(; z::Float64, Q::Float64)
 
-    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=order, nf=nf)
-    
+    order = nloops_FO
+
+    αs = alpha_s_func(μren_ratio*Q)
+    LQ = log(μren_ratio^2)
+
+    β0 = β0_func(nf)
+    β1 = β1_func(nf)
+
     x = z
     A = A_func(x)
     if x > 0.01
         B = B_func(x)
     else
-        B = Bzto0_func(x,nf)
+        B = Bzto0_func(x)
     end
+    C = C_func(x)
 
     order1 = (αs/(2π))*A
-    order2 = (αs/(2π))^2*B
+    order2 = (αs/(2π))^2*(
+          B 
+        + 1/2*β0*LQ*A
+        )
+    order3 = (αs/(2π))^3*(
+          C 
+        + β0*LQ*B
+        + (1/4*β1*LQ + 1/4*β0^2*LQ^2)*A
+        )    
 
-    if order == 1 
+    if order == 0 
         total = order1
-    elseif order == 2 
+    elseif order == 1 
         total = order1 + order2
-    elseif order == 3
-        C = C_func(x)
-        order3 = (αs/(2π))^3*C 
+    elseif order == 2 
         total = order1 + order2 + order3
     end
 
@@ -121,9 +135,9 @@ function perturbation_func(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::F
 
 end
 
-function perturbation_NNLO_sigma_χ(; χ::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+function perturbation_NNLO_sigma_χ(; χ::Float64, Q::Float64)
 
-    αs = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=3, nf=nf)
+    αs = alpha_s_func(Q)
 
     χ_list = range(0.9, stop=179.1, length=100)
     EEC_LO = df_LO[:, 2]
@@ -140,14 +154,16 @@ function perturbation_NNLO_sigma_χ(; χ::Float64, Q::Float64, μ_ini::Float64, 
     return EEC
 end
 
-function perturbation_sigma_χ(; χ::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+function perturbation_sigma_χ(; χ::Float64, Q::Float64)
 
-    if order < 3
+    order = nloops_FO
+
+    if order < 2
         z = 0.5*(1-cos(χ))
-        part = perturbation_func(z=z, Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf)
+        part = perturbation_func(z=z, Q=Q)
         total = 0.5*sin(χ)*part
     else
-        total = perturbation_NNLO_sigma_χ(χ=χ, Q=Q, μ_ini=μ_ini, αs_ini=αs_ini, order=order, nf=nf)
+        total = perturbation_NNLO_sigma_χ(χ=χ, Q=Q)
     end
     
     return total

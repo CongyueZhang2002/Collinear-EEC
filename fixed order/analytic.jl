@@ -1,6 +1,6 @@
-function resumed_EEC_analytic(; z::Float64, Q::Float64, μ_ini::Float64, αs_ini::Float64, order::Int64, nf::Int64)
+function resumed_EEC_analytic(; z::Float64, Q::Float64)
 
-    as = alpha_s_func(μf=Q, μi=μ_ini, αs=αs_ini, order=4, nf=nf)/(4π)
+    as = alpha_s_func(Q)/(4π)
 
     if nf == 5
         if order == 0

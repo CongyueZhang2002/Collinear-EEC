@@ -1,6 +1,6 @@
 @everywhere begin
 
-function NP(; z::Float64, b::Float64, ζi::Float64, ζf::Float64, params::Vector{Float64})
+function NP(b::Float64)
 
     a = params
     bstar = b/(1+(b/b0)^2)^0.5
@@ -20,17 +20,10 @@ function NP(; z::Float64, b::Float64, ζi::Float64, ζf::Float64, params::Vector
         #NP = exp(-(a[1]*b^2+a[2]*b+a[3]))
         #NP = exp(-(a[1]*b^a[2]+a[3]))
         NP = a[1]*exp(-a[2]*b^a[3])
+        #NP = exp(-a[1]*b)*(1+a[2]*b^2)/(1+a[3]*b^2)
     elseif length(a)==4
-
-        Ω1 = a[1]
-        z0 = a[2]
-        p = a[3]
-        Ω0 = a[4]
-
-        NP = exp(-(
-                    Ω1/(1+(z/z0)^p) + Ω0
-                )*b)
-        NP = exp(-(exp(-a[3]*z)*a[1]+(1-exp(-a[3]*z))*a[2])*b^a[4])
+      
+        NP = exp(-a[2]*b^a[3])
     end
 
     return NP
