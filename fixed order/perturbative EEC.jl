@@ -2,8 +2,8 @@ using PolyLog
 using Interpolations
 using CSV 
 using DataFrames
-include("..\\strong coupling\\constants.jl")
-include("..\\strong coupling\\alpha_s.jl")
+include("..\\core\\constants.jl")
+include("..\\core\\alpha_s.jl")
 
 function A_func(x)
 
@@ -19,8 +19,6 @@ end
 
 function B_func(x) 
 
-    #setprecision(96)
-    #z=BigFloat(x)
     z=x
 
     value = (
@@ -110,24 +108,25 @@ function perturbation_func(; z::Float64, Q::Float64)
     else
         B = Bzto0_func(x)
     end
-    C = C_func(x)
+
 
     order1 = (αs/(2π))*A
     order2 = (αs/(2π))^2*(
           B 
         + 1/2*β0*LQ*A
-        )
-    order3 = (αs/(2π))^3*(
-          C 
-        + β0*LQ*B
-        + (1/4*β1*LQ + 1/4*β0^2*LQ^2)*A
-        )    
+        )  
 
     if order == 0 
         total = order1
     elseif order == 1 
         total = order1 + order2
-    elseif order == 2 
+    elseif order == 2
+        C = C_func(x) 
+        order3 = (αs/(2π))^3*(
+          C 
+        + β0*LQ*B
+        + (1/4*β1*LQ + 1/4*β0^2*LQ^2)*A
+        )   
         total = order1 + order2 + order3
     end
 

@@ -3,7 +3,7 @@
 
 using PolyLog
 include("harmonic polylogs.jl")
-#include("../strong coupling/constants.jl")
+include("constants.jl")
 
 #Pqq-----------------------------------------------------------------------------------------------
 
@@ -126,12 +126,20 @@ function Pqq_integrand(; x::Float64, α::Float64, order::Int64, nf::Int64, f::Fu
         + (Pqq_D0_x*f(x) - Pqq_D0_1*f(1))/(1-x)
     )
 
+    #if order == 0
+    #    total = (α/(4*π))*integrand0
+    #elseif order == 1
+    #    total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1
+    #elseif order == 2
+    #    total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1 + (α/(4*π))^3*integrand2
+    #end
+
     if order == 0
-        total = (α/(4*π))*integrand0
+        total = integrand0
     elseif order == 1
-        total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1
+        total = integrand1
     elseif order == 2
-        total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1 + (α/(4*π))^3*integrand2
+        total = integrand2
     end
 
     return total
@@ -210,12 +218,20 @@ function Pqg_integrand(; x::Float64, α::Float64, order::Int64, nf::Int64, f::Fu
         Pqg*f(x)
     )
 
+    #if order == 0
+    #    total = (α/(4*π))*integrand0
+    #elseif order == 1
+    #    total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1
+    #elseif order == 2
+    #    total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1 + (α/(4*π))^3*integrand2
+    #end
+
     if order == 0
-        total = (α/(4*π))*integrand0
+        total = integrand0
     elseif order == 1
-        total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1
+        total = integrand1
     elseif order == 2
-        total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1 + (α/(4*π))^3*integrand2
+        total = integrand2
     end
 
     return total
@@ -284,14 +300,21 @@ function Pgq_integrand(; x::Float64, α::Float64, order::Int64, nf::Int64, f::Fu
         Pgq*f(x)
     )
 
-    if order == 0
-        total = (α/(4*π))*integrand0
-    elseif order == 1
-        total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1
-    elseif order == 2
-        total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1 + (α/(4*π))^3*integrand2
-    end
+    #if order == 0
+    #    total = (α/(4*π))*integrand0
+    #elseif order == 1
+    #    total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1
+    #elseif order == 2
+    #    total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1 + (α/(4*π))^3*integrand2
+    #end
 
+    if order == 0
+        total = integrand0
+    elseif order == 1
+        total = integrand1
+    elseif order == 2
+        total = integrand2
+    end
     return total
 end
 
@@ -414,22 +437,29 @@ function Pgg_integrand(; x::Float64, α::Float64, order::Int64, nf::Int64, f::Fu
         + 1/(1-x)*(Pgg_D0_x*f(x) - Pgg_D0_1*f(1))
     )
 
+    #if order == 0
+    #    total = (α/(4*π))*integrand0
+    #elseif order == 1
+    #    total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1
+    #elseif order == 2
+    #    total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1 + (α/(4*π))^3*integrand2
+    #end
 
     if order == 0
-        total = (α/(4*π))*integrand0
+        total = integrand0
     elseif order == 1
-        total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1
+        total = integrand1
     elseif order == 2
-        total = (α/(4*π))*integrand0 + (α/(4*π))^2*integrand1 + (α/(4*π))^3*integrand2
+        total = integrand2
     end
 
     return total
 end
 
 #Getting the moments
-#using HCubature
-#g(x) = x^2*(log(x))^2
-#f(x) = Pqq_integrand(x=x[1], α=1.0, order=0, nf=5, f=g)
-#eps=10^(-9)
-#integral, error = hcubature(f, [eps], [1-eps])
-#println(-integral)
+using HCubature
+g(x) = x^4
+f(x) = Pgg_integrand(x=x[1], α=1.0, order=2, nf=5, f=g)
+eps=10^(-9)
+integral, error = hcubature(f, [eps], [1-eps])
+println(-integral)

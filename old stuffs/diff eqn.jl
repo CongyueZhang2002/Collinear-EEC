@@ -1,7 +1,7 @@
 using DifferentialEquations
 using ForwardDiff
-include("strong coupling\\constants.jl")
-include("strong coupling\\alpha_s.jl") 
+include("core\\constants.jl")
+include("core\\alpha_s.jl") 
 
 function coupled_system_old!(dv, v, params, μ)
     jq, jg = v  # unpack state variables

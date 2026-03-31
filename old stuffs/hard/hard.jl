@@ -1,9 +1,10 @@
 #https://www.sciencedirect.com/science/article/pii/S0550321306004330
 #timelike singlet splitting functions
 
+using QuadGK
 using PolyLog
-include("../splitting/harmonic polylogs.jl")
-#include("../strong coupling/constants.jl")
+include("harmonic polylogs.jl")
+include("constants.jl")
 
 #quark---------------------------------------------------------------------------------------------
 
@@ -166,11 +167,11 @@ function Hq_integrand(; x::Float64, α::Float64, order::Int64, fx::Float64, f1::
     elseif order == 0
         total = integrand0
     elseif order == 1
-        total = integrand0 + (α/(4*π))*integrand1   
-        #total = integrand1
+        #total = integrand0 + (α/(4*π))*integrand1   
+        total = integrand1
     elseif order == 2
-        total = integrand0 + (α/(4*π))*integrand1 + (α/(4*π))^2*integrand2
-        #total = integrand2/2
+        #total = integrand0 + (α/(4*π))*integrand1 + (α/(4*π))^2*integrand2
+        total = integrand2
     end
 
     return total
@@ -233,18 +234,17 @@ function Hg_integrand(; x::Float64, α::Float64, order::Int64, fx::Float64, f1::
     elseif order == 0
         total = integrand0
     elseif order == 1
-        total = integrand0 + (α/(4*π))*integrand1
-        #total = integrand1
+        #total = integrand0 + (α/(4*π))*integrand1
+        total = integrand1
     elseif order == 2
-        total = integrand0 + (α/(4*π))*integrand1 + (α/(4*π))^2*integrand2
-        #total = integrand2/4
+        #total = integrand0 + (α/(4*π))*integrand1 + (α/(4*π))^2*integrand2
+        total = integrand2
     end
 
     return total
 end
 
-#using HCubature
-#f(x) = Hg_integrand(x=x[1], α=0.118, order=2, fx=x[1]^2,f1=1.0,nf=5)
-#eps=10^(-12)
-#integral, error = hcubature(f, [eps], [1-eps])
-#println(integral)
+f(x) = Hq_integrand(x=x, α=0.118, order=0, fx=x^2, f1=1.0, nf=5)
+eps=10^(-12)
+integral, error = quadgk(f, eps, 1-eps)
+println(integral)

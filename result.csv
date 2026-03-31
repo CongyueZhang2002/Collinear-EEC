@@ -1,2 +1,3 @@
-N,ansatz,cut,αs,params,χ2/N
-112,exp(-a[2]*b^a[3]),"{'sqrtz': [0, 0.5]}",0.118,[0.8351 2.773  1.191  1.374 ],1.24
+version https://git-lfs.github.com/spec/v1
+oid sha256:bb776dd8f6bf5e4fb4384bf26ad8ad0556626f00aaa0a9dd5b1a41291a1c779d
+size 113

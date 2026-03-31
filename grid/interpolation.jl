@@ -2,8 +2,8 @@ using Interpolations
 using DelimitedFiles
 using HCubature
 
-include("..\\strong coupling\\constants.jl")
-include("..\\strong coupling\\alpha_s.jl")
+include("..\\core\\constants.jl")
+include("..\\core\\alpha_s.jl")
 include("..\\anomalous dim\\cusp\\cusp.jl")
 
 @everywhere begin

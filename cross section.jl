@@ -3,22 +3,22 @@ using Distributed
 @everywhere begin
 
 using QuadGK
-using HCubature
 using SpecialFunctions
 include("fixed order/analytic.jl")
 
-function Integrand_func(; b::Float64, z::Float64, Q::Float64, Coeffs::Vector{Float64})
+function Integrand_func(; b::Float64, z::Float64, Q::Float64, as::Float64)
+
+    a = params
 
     k = sqrt(z)*Q
     bstar = b/sqrt(1+b^2/b0^2)
 
     Lb = log((μren_ratio*Q/(μJ_ratio*b0/bstar))^2)
 
-    Lb_vec = [1.0, Lb, Lb^2, Lb^3, Lb^4, Lb^5, Lb^6, Lb^7, Lb^8, Lb^9]
-    Σb = sum(Lb_vec .* Coeffs)
+    Coeffs = Sigma_coeffs_func(a1b=a[2]*b, a2=a[3])
+    Σb = Σb_func(as=as, Lb=Lb, Coeffs=Coeffs)
 
-    NP_Sudakov = NP(b)
-    value = Q^2/2*b*besselj0(b*k)*(Σb*NP_Sudakov)
+    value = Q^2/2*b*besselj0(b*k)*Σb
 
     return value
 end
@@ -26,10 +26,8 @@ end
 function sigma_z(; z::Float64, Q::Float64)
 
     as = alpha_s_func(μren_ratio*Q)/(4π)
-    
-    Coeffs = Σb_func(as)
 
-    integrand(b) = Integrand_func(b=b, z=z, Q=Q, Coeffs=Coeffs)
+    integrand(b) = Integrand_func(b=b, z=z, Q=Q, as=as)
 
     total, error = quadgk(integrand, 0.0001, 5.0, rtol=rtol)
 

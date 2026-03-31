@@ -1,0 +1,28 @@
+
+    value = (
+        (16*(1 + x)*(11 + 19*x^2 + 6*nf*(-1 + x^2))*log1mx*reli[2, 1 - x])/(9*(-1 + x^2)) + 
+        (2*(288*nf - 72*x + 864*nf*x - 216*x^2 + 576*nf*x^2 + 72*x^3 - 576*nf*x^3 + 72*x^4 - 864*nf*x^4 - 288*nf*x^5 + 144*x^6 - 144*x*log1mx + 144*x^2*log1mx - 144*x^3*log1mx + 144*x^4*log1mx - 288*x*logx - 
+           432*x^3*logx - 144*x^4*logx)*reli[2, -x])/(81*x*(-1 + x^2)) + (2*(576*nf - 4068*x + 288*nf*x + 1980*x^2 - 1584*nf*x^2 + 2556*x^3 - 432*nf*x^3 - 3492*x^4 + 1152*nf*x^4 + 288*nf*x^5 + 720*x*log1mx + 
+           720*x^2*log1mx + 720*x^3*log1mx + 720*x^4*log1mx + 3456*x*logx + 3456*x^2*logx + 3312*x^3*logx + 3312*x^4*logx)*reli[2, x])/(81*x*(-1 + x^2)) + 
+        (2*(144*x - 144*x^2 + 144*x^3 - 144*x^4)*reli[3, (1 - x]/2))/(81*x*(-1 + x^2)) + (2*(-936*x + 432*nf*x - 648*x^2 + 432*nf*x^2 - 1512*x^3 - 432*nf*x^3 - 1224*x^4 - 432*nf*x^4)*reli[3, 1 - x])/(81*x*(-1 + x^2)) + 
+        (2*(432*x + 144*x^2 + 864*x^3 + 288*x^4)*reli[3, -x])/(81*x*(-1 + x^2)) + (2*(-6192*x + 1296*nf*x - 6048*x^2 + 1296*nf*x^2 - 7776*x^3 - 1296*nf*x^3 - 7632*x^4 - 1296*nf*x^4)*reli[3, x])/(81*x*(-1 + x^2)) + 
+        (2*(-144*x + 144*x^2 - 144*x^3 + 144*x^4)*reli[3, (2*x]/(-1 + x)))/(81*x*(-1 + x^2)) + (2*(144*x - 144*x^2 + 144*x^3 - 144*x^4)*reli[3, x/(1 + x]))/(81*x*(-1 + x^2)) + 
+        (2*(-144*x + 144*x^2 - 144*x^3 + 144*x^4)*reli[3, (2*x]/(1 + x)))/(81*x*(-1 + x^2)) + (2*(144*x - 144*x^2 + 144*x^3 - 144*x^4)*reli[3, (1 + x]/2))/(81*x*(-1 + x^2)) + 
+        (2*(592*nf - 6879*x + 3550*nf*x + 492*pi^2*x - 24*nf*pi^2*x + 429*x^2 - 3762*nf*x^2 + 312*pi^2*x^2 + 264*nf*pi^2*x^2 + 7023*x^3 - 4142*nf*x^3 - 240*pi^2*x^3 - 429*x^4 + 3170*nf*x^4 - 84*pi^2*x^4 - 288*nf*pi^2*x^4 - 144*x^5 + 
+           592*nf*x^5 + 24*pi^2*x^6 - 48*x*log2^3 + 48*x^2*log2^3 - 48*x^3*log2^3 + 48*x^4*log2^3 + 12*pi^2*x*log4 - 12*pi^2*x^2*log4 + 12*pi^2*x^3*log4 - 12*pi^2*x^4*log4 - 144*nf*log1mx + 1962*x*log1mx + 
+           1500*nf*x*log1mx - 132*pi^2*x*log1mx + 1638*x^2*log1mx - 804*nf*x^2*log1mx - 156*pi^2*x^2*log1mx - 1962*x^3*log1mx - 2220*nf*x^3*log1mx - 84*pi^2*x^3*log1mx - 1638*x^4*log1mx + 
+           948*nf*x^4*log1mx - 108*pi^2*x^4*log1mx + 720*nf*x^5*log1mx + 72*x*log2^2*log1mx - 72*x^2*log2^2*log1mx + 72*x^3*log2^2*log1mx - 72*x^4*log2^2*log1mx - 144*nf*log1mx^2 - 
+           1458*x*log1mx^2 - 72*nf*x*log1mx^2 - 882*x^2*log1mx^2 + 288*nf*x^2*log1mx^2 + 1458*x^3*log1mx^2 + 216*nf*x^3*log1mx^2 + 882*x^4*log1mx^2 - 144*nf*x^4*log1mx^2 - 144*nf*x^5*log1mx^2 - 
+           24*x*log8*log1mx^2 + 24*x^2*log8*log1mx^2 - 24*x^3*log8*log1mx^2 + 24*x^4*log8*log1mx^2 + 312*x*log1mx^3 + 264*x^2*log1mx^3 - 264*x^3*log1mx^3 - 312*x^4*log1mx^3 - 288*nf*logx - 
+           4086*x*logx + 4788*nf*x*logx + 84*pi^2*x*logx - 144*nf*pi^2*x*logx - 1710*x^2*logx + 3276*nf*x^2*logx + 108*pi^2*x^2*logx - 144*nf*pi^2*x^2*logx + 594*x^3*logx - 3588*nf*x^3*logx + 276*pi^2*x^3*logx + 
+           144*nf*pi^2*x^3*logx - 1638*x^4*logx - 2412*nf*x^4*logx + 300*pi^2*x^4*logx + 144*nf*pi^2*x^4*logx - 144*x^5*logx - 624*nf*x^5*logx - 1440*x*log1mx*logx + 3744*x^2*log1mx*logx + 
+           3168*x^3*log1mx*logx - 2016*x^4*log1mx*logx - 216*x*log1mx^2*logx - 216*nf*x*log1mx^2*logx - 72*x^2*log1mx^2*logx - 216*nf*x^2*log1mx^2*logx + 72*x^3*log1mx^2*logx + 
+           216*nf*x^3*log1mx^2*logx + 216*x^4*log1mx^2*logx + 216*nf*x^4*log1mx^2*logx - 576*nf*logx^2 + 729*x*logx^2 - 288*nf*x*logx^2 - 1179*x^2*logx^2 + 936*nf*x^2*logx^2 - 2511*x^3*logx^2 + 
+           108*nf*x^3*logx^2 - 531*x^4*logx^2 - 396*nf*x^4*logx^2 + 144*nf*x^5*logx^2 - 72*x^6*logx^2 + 108*x*log1mx*logx^2 + 108*x^2*log1mx*logx^2 + 36*x^3*log1mx*logx^2 + 36*x^4*log1mx*logx^2 + 
+           264*x*logx^3 - 396*nf*x*logx^3 + 156*x^2*logx^3 - 396*nf*x^2*logx^3 + 792*x^3*logx^3 + 396*nf*x^3*logx^3 + 684*x^4*logx^3 + 396*nf*x^4*logx^3 - 72*pi^2*x*log1px + 72*pi^2*x^2*log1px - 
+           144*pi^2*x^3*log1px + 144*pi^2*x^4*log1px + 72*x*log2^2*log1px - 72*x^2*log2^2*log1px + 72*x^3*log2^2*log1px - 72*x^4*log2^2*log1px + 288*nf*logx*log1px - 72*x*logx*log1px + 
+           864*nf*x*logx*log1px - 216*x^2*logx*log1px + 576*nf*x^2*logx*log1px + 72*x^3*logx*log1px - 576*nf*x^3*logx*log1px + 72*x^4*logx*log1px - 864*nf*x^4*logx*log1px - 
+           288*nf*x^5*logx*log1px + 144*x^6*logx*log1px - 144*x*logx^2*log1px + 144*x^2*logx^2*log1px - 72*x^3*logx^2*log1px + 72*x^4*logx^2*log1px - 12*x*log(64)*log1px^2 + 
+           12*x^2*log(64)*log1px^2 - 12*x^3*log(64)*log1px^2 + 12*x^4*log(64)*log1px^2 - 144*x*(-1 + x - 3*x^2 + 3*x^3)*reli[3, 1 + x] + 9324*x*z3 - 1296*nf*x*z3 + 9468*x^2*z3 - 1296*nf*x^2*z3 + 
+           4860*x^3*z3 + 1296*nf*x^3*z3 + 5292*x^4*z3 + 1296*nf*x^4*z3))/(81*x*(-1 + x^2))       
+    )

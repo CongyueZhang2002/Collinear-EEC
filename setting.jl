@@ -8,6 +8,6 @@ const nloops_NS_peak = 1
 
 const nf = 5
 
-const rtol = 1e-9
+const rtol = 1e-4
 
 end
