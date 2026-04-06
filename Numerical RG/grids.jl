@@ -1,53 +1,52 @@
 struct LatticeGrid
     n_nodes::Int64
-    ell_max::Float64
+    b_min::Float64
+    b_max::Float64
     delta_ell::Float64
-    bmax::Float64
-    ell::Vector{Float64}
-    b::Vector{Float64}
-    bstar::Vector{Float64}
-    mu_start::Vector{Float64}
-    t_start::Vector{Float64}
+    ell_grid::Vector{Float64}
+    b_grid::Vector{Float64}
+    bstar_grid::Vector{Float64}
+    mu_i_grid::Vector{Float64}
+    t_grid::Vector{Float64}
 end
 
-function build_lattice_grid(; n_nodes::Int64, ell_max::Float64, delta_ell::Float64, bmax::Float64)
+function build_lattice_grid(;
+    n_nodes::Int64,
+    b_min::Float64,
+    b_max::Float64,
+    bstar_func::Function,
+)
 
-    ell = [ell_max - (i - 1) * delta_ell for i in 1:n_nodes]
-    b = exp.(ell)
-    bstar = b ./ sqrt.(1 .+ (b ./ bmax).^2)
-    mu_start = b0 ./ bstar
-    t_start = log.(mu_start.^2)
+    if n_nodes < 2
+        error("n_nodes must be at least 2.")
+    end
+    if b_min <= 0.0
+        error("b_min must be positive.")
+    end
+    if b_max < b_min
+        error("b_max must be greater than or equal to b_min.")
+    end
+
+    ell_min = log(b_min)
+    ell_max = log(b_max)
+    delta_ell = (ell_max - ell_min) / (n_nodes - 1)
+    ell_grid = collect(range(ell_max, ell_min, length = n_nodes))
+    b_grid = exp.(ell_grid)
+    bstar_grid = bstar_func.(b_grid)
+    mu_i_grid = b0 ./ bstar_grid
+    t_grid = log.(mu_i_grid.^2)
 
     return LatticeGrid(
         n_nodes,
-        ell_max,
+        b_min,
+        b_max,
         delta_ell,
-        bmax,
-        ell,
-        b,
-        bstar,
-        mu_start,
-        t_start,
+        ell_grid,
+        b_grid,
+        bstar_grid,
+        mu_i_grid,
+        t_grid,
     )
-end
-
-function build_time_grid(; t_start::AbstractVector{Float64}, delta_t::Float64, t_final::Float64)
-
-    t_min = minimum(t_start)
-
-    if t_final < t_min
-        error("t_final must be at least the smallest activation time.")
-    end
-
-    regular_grid = collect(t_min:delta_t:t_final)
-
-    if isempty(regular_grid) || regular_grid[end] < t_final
-        push!(regular_grid, t_final)
-    end
-
-    merged_grid = sort!(unique(vcat(regular_grid, collect(t_start), [t_final])))
-
-    return merged_grid
 end
 
 function build_boundary_values(; grid::LatticeGrid, boundary_func::Function)
@@ -57,10 +56,9 @@ function build_boundary_values(; grid::LatticeGrid, boundary_func::Function)
 
     for i in 1:grid.n_nodes
         jq_bc[i], jg_bc[i] = boundary_func(
-            b = grid.b[i],
-            bstar = grid.bstar[i],
-            mu_start = grid.mu_start[i],
-            t_start = grid.t_start[i],
+            b = grid.b_grid[i],
+            bstar = grid.bstar_grid[i],
+            mu_start = grid.mu_i_grid[i],
         )
     end
 

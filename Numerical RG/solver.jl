@@ -1,4 +1,4 @@
-function unit_boundary_value(; b::Float64, bstar::Float64, mu_start::Float64, t_start::Float64)
+function unit_boundary_value(; b::Float64, bstar::Float64, mu_start::Float64)
     return 1.0, 1.0
 end
 
@@ -8,13 +8,13 @@ function activate_nodes!(
     active::AbstractVector{Bool},
     jq_bc::AbstractVector{Float64},
     jg_bc::AbstractVector{Float64},
-    t_start::AbstractVector{Float64},
+    mu_i_grid::AbstractVector{Float64},
     t::Float64;
     activation_tol::Float64 = 1e-12,
 )
 
     for i in eachindex(active)
-        if !active[i] && t + activation_tol >= t_start[i]
+        if !active[i] && t + activation_tol >= log(mu_i_grid[i]^2)
             jq[i] = jq_bc[i]
             jg[i] = jg_bc[i]
             active[i] = true
@@ -26,7 +26,6 @@ end
 
 function solve_stepwise_rg(;
     lattice::LatticeGrid,
-    time_grid::AbstractVector{Float64},
     boundary_func::Function = unit_boundary_value,
     order::Int64,
     alpha_s_Z_value::Float64 = 0.118,
@@ -36,20 +35,52 @@ function solve_stepwise_rg(;
 )
 
     boundary_values = build_boundary_values(grid = lattice, boundary_func = boundary_func)
+    time_grid = lattice.t_grid
+    kernel_table = build_splitting_kernel_table(
+        delta_ell = lattice.delta_ell,
+        n_nodes = lattice.n_nodes,
+        t_grid = time_grid,
+        order = order,
+        alpha_s_Z_value = alpha_s_Z_value,
+        alpha_s_loops = alpha_s_loops,
+    )
+
+    if method == :rk2
+        midpoint_grid = copy(time_grid)
+
+        for n in 1:(lattice.n_nodes - 1)
+            midpoint_grid[n] = 0.5 * (time_grid[n] + time_grid[n + 1])
+        end
+
+        midpoint_grid[end] = time_grid[end]
+
+        midpoint_kernel_table = build_splitting_kernel_table(
+            delta_ell = lattice.delta_ell,
+            n_nodes = lattice.n_nodes,
+            t_grid = midpoint_grid,
+            order = order,
+            alpha_s_Z_value = alpha_s_Z_value,
+            alpha_s_loops = alpha_s_loops,
+        )
+    elseif method == :euler
+        midpoint_kernel_table = nothing
+    else
+        error("Unknown method: $method. Expected :euler or :rk2.")
+    end
 
     jq = zeros(Float64, lattice.n_nodes)
     jg = zeros(Float64, lattice.n_nodes)
     active = falses(lattice.n_nodes)
 
     if store_history
-        jq_history = zeros(Float64, lattice.n_nodes, length(time_grid))
-        jg_history = zeros(Float64, lattice.n_nodes, length(time_grid))
+        jq_history = zeros(Float64, lattice.n_nodes, lattice.n_nodes)
+        jg_history = zeros(Float64, lattice.n_nodes, lattice.n_nodes)
     else
         jq_history = zeros(Float64, 0, 0)
         jg_history = zeros(Float64, 0, 0)
     end
 
-    for n in eachindex(time_grid)
+    for n in 1:lattice.n_nodes
         t_now = time_grid[n]
 
         activate_nodes!(
@@ -58,7 +89,7 @@ function solve_stepwise_rg(;
             active,
             boundary_values.jq_bc,
             boundary_values.jg_bc,
-            lattice.t_start,
+            lattice.mu_i_grid,
             t_now,
         )
 
@@ -67,23 +98,20 @@ function solve_stepwise_rg(;
             jg_history[:, n] .= jg
         end
 
-        if n == length(time_grid)
+        if n == lattice.n_nodes
             break
         end
 
         dt = time_grid[n + 1] - t_now
 
         if method == :euler
-            components = build_splitting_component_grid(
-                delta_ell = lattice.delta_ell,
-                n_nodes = lattice.n_nodes,
-                mu = t_to_mu(t_now),
-                order = order,
-                alpha_s_Z_value = alpha_s_Z_value,
-                alpha_s_loops = alpha_s_loops,
+            rhs = build_rhs(
+                jq = jq,
+                jg = jg,
+                active = active,
+                kernels = kernel_table,
+                time_index = n,
             )
-
-            rhs = build_rhs(jq = jq, jg = jg, active = active, components = components)
 
             for i in eachindex(active)
                 if active[i]
@@ -93,16 +121,13 @@ function solve_stepwise_rg(;
             end
 
         elseif method == :rk2
-            components_1 = build_splitting_component_grid(
-                delta_ell = lattice.delta_ell,
-                n_nodes = lattice.n_nodes,
-                mu = t_to_mu(t_now),
-                order = order,
-                alpha_s_Z_value = alpha_s_Z_value,
-                alpha_s_loops = alpha_s_loops,
+            k1 = build_rhs(
+                jq = jq,
+                jg = jg,
+                active = active,
+                kernels = kernel_table,
+                time_index = n,
             )
-
-            k1 = build_rhs(jq = jq, jg = jg, active = active, components = components_1)
 
             jq_mid = copy(jq)
             jg_mid = copy(jg)
@@ -114,16 +139,13 @@ function solve_stepwise_rg(;
                 end
             end
 
-            components_2 = build_splitting_component_grid(
-                delta_ell = lattice.delta_ell,
-                n_nodes = lattice.n_nodes,
-                mu = t_to_mu(t_now + 0.5 * dt),
-                order = order,
-                alpha_s_Z_value = alpha_s_Z_value,
-                alpha_s_loops = alpha_s_loops,
+            k2 = build_rhs(
+                jq = jq_mid,
+                jg = jg_mid,
+                active = active,
+                kernels = midpoint_kernel_table,
+                time_index = n,
             )
-
-            k2 = build_rhs(jq = jq_mid, jg = jg_mid, active = active, components = components_2)
 
             for i in eachindex(active)
                 if active[i]
@@ -132,8 +154,6 @@ function solve_stepwise_rg(;
                 end
             end
 
-        else
-            error("Unknown method: $method. Expected :euler or :rk2.")
         end
     end
 
