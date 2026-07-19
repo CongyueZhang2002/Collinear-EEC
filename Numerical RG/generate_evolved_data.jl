@@ -46,58 +46,87 @@ function jet_boundary_coefficients(nf::Int64)
 end
 
 """
-    build_physical_interpolator(; n_nodes=1000, b_min=0.001, b_max=50.0)
+    build_physical_boundary_func(; order, nf_scheme, alpha_s_order)
 
-Build the callable quark-gluon RG solution used for the published six-scale
-plot. The boundary contains the zero-log perturbative constants through NNLO
-times `exp(-2.3b)` for quarks and `exp(-3.8b)` for gluons. Evolution uses the
-cumulative NNLO time-like splitting kernels, VFNS, four-loop numerical
-`alpha_s`, and midpoint RK2.
+Build the physical boundary condition with zero-log perturbative constants
+through `order`, multiplied by `exp(-2.3b)` for quarks and `exp(-3.8b)` for
+gluons.
 """
-function build_physical_interpolator(;
-    n_nodes::Int64 = 1000,
-    b_min::Float64 = 0.001,
-    b_max::Float64 = 50.0,
+function build_physical_boundary_func(;
+    order::Int64 = 2,
+    nf_scheme::Symbol = :VFNS,
+    alpha_s_order::Int64 = 4,
 )
-    bstar_func(b) = b / sqrt(1.0 + b^2 / b0^2)
-    lattice = build_lattice_grid(
-        n_nodes = n_nodes,
-        b_min = b_min,
-        b_max = b_max,
-        bstar_func = bstar_func,
-    )
-
-    nf_scheme = :VFNS
-    alpha_s_order = 4
-    boundary_alpha_s_vec = alpha_s_grid(
-        lattice.t_grid;
-        order = alpha_s_order,
-        nf_scheme = nf_scheme,
-    )
-    alpha_s_at_mu = Dict{Float64, Float64}(
-        zip(lattice.mu_i_grid, boundary_alpha_s_vec),
-    )
+    0 <= order <= 2 ||
+        throw(ArgumentError("The physical boundary supports order = 0, 1, or 2."))
 
     function boundary_func(; b, bstar, mu_start)
         nf = nf_func(mu_start; scheme = nf_scheme)
-        a_s = alpha_s_at_mu[mu_start] / (4.0 * pi)
+        a_s = alpha_s_func_numerical(
+            mu_f = mu_start,
+            order = alpha_s_order,
+            nf_scheme = nf_scheme,
+        ) / (4.0 * pi)
         coefficient = jet_boundary_coefficients(nf)
-        jq_pert = 1.0 + a_s * coefficient.jq1 + a_s^2 * coefficient.jq2
-        jg_pert = 1.0 + a_s * coefficient.jg1 + a_s^2 * coefficient.jg2
+        jq_pert = 1.0
+        jg_pert = 1.0
+        if order >= 1
+            jq_pert += a_s * coefficient.jq1
+            jg_pert += a_s * coefficient.jg1
+        end
+        if order >= 2
+            jq_pert += a_s^2 * coefficient.jq2
+            jg_pert += a_s^2 * coefficient.jg2
+        end
         return (
             jq_pert * exp(-2.3 * b),
             jg_pert * exp(-3.8 * b),
         )
     end
 
-    return solve_stepwise_rg(
-        lattice = lattice,
+    return boundary_func
+end
+
+"""
+    build_evolved_interpolator(; n_nodes, b_min, b_max, bstar_func,
+                               boundary_func, order, nf_scheme,
+                               alpha_s_order, method, closure_check)
+
+Build a callable quark-gluon RG solution. The grid is constructed internally
+from `n_nodes`, `b_min`, `b_max`, and `bstar_func`. If `boundary_func` is
+omitted, the physical perturbative-times-nonperturbative boundary is used.
+"""
+function build_evolved_interpolator(;
+    n_nodes::Int64 = 1000,
+    b_min::Float64 = 0.001,
+    b_max::Float64 = 50.0,
+    bstar_func::Function = b -> b / sqrt(1.0 + b^2 / b0^2),
+    boundary_func::Union{Nothing,Function} = nothing,
+    order::Int64 = 2,
+    nf_scheme::Symbol = :VFNS,
+    alpha_s_order::Int64 = 4,
+    method::Symbol = :rk2,
+    closure_check::Symbol = :error,
+)
+    if boundary_func === nothing
+        boundary_func = build_physical_boundary_func(
+            order = order,
+            nf_scheme = nf_scheme,
+            alpha_s_order = alpha_s_order,
+        )
+    end
+
+    return solve_jet_rg(
+        n_nodes = n_nodes,
+        b_min = b_min,
+        b_max = b_max,
+        bstar_func = bstar_func,
         boundary_func = boundary_func,
-        order = 2,
+        order = order,
         nf_scheme = nf_scheme,
         alpha_s_order = alpha_s_order,
-        method = :rk2,
-        closure_check = :error,
+        method = method,
+        closure_check = closure_check,
     )
 end
 
@@ -141,7 +170,7 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     n_nodes = isempty(ARGS) ? 1000 : parse(Int64, only(ARGS))
-    timed_solution = @timed build_physical_interpolator(n_nodes = n_nodes)
+    timed_solution = @timed build_evolved_interpolator(n_nodes = n_nodes)
     output_paths = write_evolved_csvs(timed_solution.value)
 
     @printf(

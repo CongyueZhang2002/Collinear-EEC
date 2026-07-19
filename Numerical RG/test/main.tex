@@ -676,10 +676,24 @@ number at each boundary node.
 \begin{lstlisting}
 include("Numerical RG/generate_evolved_data.jl")
 
-solution = build_physical_interpolator(
+bstar_func(b) = b / sqrt(1.0 + b^2 / b0^2)
+boundary_func = build_physical_boundary_func(
+    order = 2,
+    nf_scheme = :VFNS,
+    alpha_s_order = 4,
+)
+
+solution = build_evolved_interpolator(
     n_nodes = 1000,
     b_min = 0.001,
     b_max = 50.0,
+    bstar_func = bstar_func,
+    boundary_func = boundary_func,
+    order = 2,
+    nf_scheme = :VFNS,
+    alpha_s_order = 4,
+    method = :rk2,
+    closure_check = :error,
 )
 
 # Log-bilinear interpolation anywhere in the stored plane.
