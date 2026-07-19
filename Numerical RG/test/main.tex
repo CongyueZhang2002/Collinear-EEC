@@ -653,6 +653,53 @@ components, or one may request \texttt{component = :q} or
 \texttt{component = :g}. Queries outside the stored rectangle raise a
 \texttt{DomainError}; no extrapolation is performed.
 
+\subsection{Physical NNLO example and tabulated output}
+
+The physical-boundary example used for the six-scale plot is implemented by
+\path{generate_evolved_data.jl}. It uses a \(1000\times1000\) lattice,
+\(b_{\min}=0.001~\mathrm{GeV}^{-1}\),
+\(b_{\max}=50~\mathrm{GeV}^{-1}\), VFNS, four-loop numerical running,
+midpoint RK2, and cumulative NNLO splitting evolution. The boundary condition
+is
+\[
+  J_i\bigl(b,\mu_*(b)\bigr)
+  =
+  \left[
+    1+a_s(\mu_*)J_i^{(1)}(n_f)
+     +a_s^2(\mu_*)J_i^{(2)}(n_f)
+  \right]\ee^{-a_i b},
+\]
+where \(a_q=2.3~\mathrm{GeV}\), \(a_g=3.8~\mathrm{GeV}\), and both
+\(\alpha_s(\mu_*)\) and the perturbative coefficients use the VFNS flavor
+number at each boundary node.
+
+\begin{lstlisting}
+include("Numerical RG/generate_evolved_data.jl")
+
+solution = build_physical_interpolator(
+    n_nodes = 1000,
+    b_min = 0.001,
+    b_max = 50.0,
+)
+
+# Log-bilinear interpolation anywhere in the stored plane.
+value = solution(1.0, 100.0)
+jq, jg = value.jq, value.jg
+
+# One b,Jq,Jg file for each requested scale.
+write_evolved_csvs(solution)
+\end{lstlisting}
+
+Running
+\begin{lstlisting}
+julia --threads=auto "Numerical RG/generate_evolved_data.jl"
+\end{lstlisting}
+generates six files in \texttt{Numerical RG/data} at
+\(\mu=10,20,50,100,200,500~\mathrm{GeV}\). Each file contains 500
+logarithmically spaced points over
+\(0.01\le b\le5~\mathrm{GeV}^{-1}\) with columns
+\texttt{b}, \texttt{Jq}, and \texttt{Jg}.
+
 \subsection{Public inputs}
 
 \begin{table}[H]
