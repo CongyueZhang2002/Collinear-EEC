@@ -1,0 +1,503 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs,tabularx,array}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{titlesec}
+
+\definecolor{accent}{RGB}{25,75,115}
+\definecolor{lightaccent}{RGB}{235,244,249}
+\definecolor{codebg}{RGB}{247,248,249}
+\definecolor{warning}{RGB}{145,80,20}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=accent,
+  urlcolor=accent
+}
+
+\titleformat{\section}{\Large\bfseries\color{accent}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\large\bfseries\color{accent}}{\thesubsection}{0.7em}{}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize Numerical solution of the \(b\)-space jet RG}
+\fancyhead[R]{\footnotesize \thepage}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  breaklines=true,
+  aboveskip=9pt,
+  belowskip=8pt
+}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\ee}{\mathrm{e}}
+\newcommand{\as}{a_s}
+\newcommand{\Jvec}{\bm J}
+\newcommand{\Pmat}{\bm P}
+\newcommand{\Rvec}{\bm{\mathcal R}}
+\newcommand{\bzero}{b_0}
+
+\title{\textbf{Numerical Solution of the \texorpdfstring{\(b\)}{b}-Space Jet RG}\\
+\large Problem formulation, transformed geometry, and stepwise method}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+\fcolorbox{accent}{lightaccent}{
+\begin{minipage}{0.92\textwidth}
+\textbf{Objective.}
+Given quark and gluon jet functions on the \(b\)-dependent canonical line
+\(\mu=\mu_*(b)\), construct the solution throughout the finite
+\((b,\mu)\) rectangle. The implementation uses a uniform grid in
+\(\ell=\ln b\), derives its time grid from the same boundary line, precomputes
+the complete splitting convolution, evolves both sides of the line, and
+returns a callable interpolator for \(J_q(b,\mu)\) and \(J_g(b,\mu)\).
+\end{minipage}}
+\end{center}
+
+\tableofcontents
+
+\section{The \texorpdfstring{\(b\)}{b}-space evolution problem}
+
+\subsection{Renormalization-group equation}
+
+The object to be evolved is the two-component row vector
+\begin{equation}
+  \Jvec(b,\mu)
+  =
+  \bigl(J_q(b,\mu),J_g(b,\mu)\bigr).
+  \label{eq:jet-vector}
+\end{equation}
+Its position-space renormalization-group equation is
+\begin{equation}
+  \frac{\partial}{\partial\ln\mu^2}\Jvec(b,\mu)
+  =
+  \int_0^1 \dd y\,y^2\,
+  \Jvec\left(\frac{b}{y},\mu\right)\Pmat(y,\mu),
+  \label{eq:bspace-rg}
+\end{equation}
+where the time-like splitting matrix is
+\begin{equation}
+  \Pmat(y,\mu)
+  =
+  \begin{pmatrix}
+    P_{qq}(y,\mu) & P_{qg}(y,\mu)\\
+    P_{gq}(y,\mu) & P_{gg}(y,\mu)
+  \end{pmatrix}.
+  \label{eq:splitting-matrix}
+\end{equation}
+The row-vector convention fixes the channel orientation. In components,
+\begin{align}
+  \frac{\partial J_q}{\partial\ln\mu^2}
+  &=
+  \int_0^1\dd y\,y^2
+  \left[
+    J_q(b/y,\mu)P_{qq}(y,\mu)
+    +J_g(b/y,\mu)P_{gq}(y,\mu)
+  \right],
+  \label{eq:bspace-q}
+  \\
+  \frac{\partial J_g}{\partial\ln\mu^2}
+  &=
+  \int_0^1\dd y\,y^2
+  \left[
+    J_q(b/y,\mu)P_{qg}(y,\mu)
+    +J_g(b/y,\mu)P_{gg}(y,\mu)
+  \right].
+  \label{eq:bspace-g}
+\end{align}
+
+\subsection{Boundary data on a scale curve}
+
+The initial condition is not specified at one common value of \(\mu\).
+Instead, every \(b\) has a canonical starting scale
+\begin{equation}
+  \mu_*(b)=\frac{\bzero}{b_*(b)},
+  \qquad
+  \bzero=2\ee^{-\gamma_E},
+  \label{eq:canonical-scale}
+\end{equation}
+and the input is
+\begin{equation}
+  \Jvec\bigl(b,\mu_*(b)\bigr)
+  =
+  \Jvec_{\mathrm{bc}}(b).
+  \label{eq:boundary-value}
+\end{equation}
+The numerical solver treats both \(b_*(b)\) and
+\(\Jvec_{\mathrm{bc}}(b)\) as user-supplied functions. A common choice is
+\begin{equation}
+  b_*(b)
+  =
+  \frac{b}{\sqrt{1+b^2/b_{\mathrm{sat}}^2}},
+  \label{eq:bstar-example}
+\end{equation}
+where \(b_{\mathrm{sat}}\) is the saturation parameter. This notation keeps
+it distinct from the numerical endpoint \(b_{\mathrm{grid,max}}\).
+
+The domain ordering below assumes that \(\mu_*(b)\) strictly decreases as
+\(b\) increases, or equivalently that \(t_*(\ell)\) strictly decreases with
+\(\ell\). The lattice constructor checks the corresponding discrete
+monotonicity condition.
+
+For input bounds
+\(b_{\mathrm{grid,min}}\le b\le b_{\mathrm{grid,max}}\), the desired output
+is the full solution over
+\begin{equation}
+  \mu_{\min}=\mu_*(b_{\mathrm{grid,max}})
+  \le \mu \le
+  \mu_{\max}=\mu_*(b_{\mathrm{grid,min}}).
+  \label{eq:mu-domain}
+\end{equation}
+Thus the scale range is determined by the \(b\) range and \(b_*(b)\); it is
+not an independent solver input.
+
+Numerical examples use \(b\) and \(b_*\) in \(\mathrm{GeV}^{-1}\) and \(\mu\)
+in \(\mathrm{GeV}\). Logarithms of dimensional quantities are shorthand for
+ratios to the corresponding reference unit.
+
+\section{Change of variables}
+
+Define
+\begin{equation}
+  \ell=\ln b,
+  \qquad
+  t=\ln\mu^2,
+  \qquad
+  y=\ee^{-u},
+  \quad u\ge0.
+  \label{eq:variables}
+\end{equation}
+Then
+\[
+  \frac{b}{y}=b\ee^u,
+  \qquad
+  \ln\left(\frac{b}{y}\right)=\ell+u,
+  \qquad
+  y^2\dd y=-\ee^{-3u}\dd u.
+\]
+Reversing the integration limits gives
+\begin{equation}
+  \partial_t\Jvec(\ell,t)
+  =
+  \int_0^\infty\dd u\,\ee^{-3u}\,
+  \Jvec(\ell+u,t)\Pmat(\ee^{-u},t).
+  \label{eq:transformed-rg}
+\end{equation}
+The important structural fact is that the derivative at \(\ell\) depends
+only on the same point and on points at larger \(\ell\), or equivalently at
+larger \(b\).
+
+In the transformed plane, the boundary curve is
+\begin{equation}
+  t_*(\ell)
+  =
+  2\ln\left[\frac{\bzero}{b_*(\ee^\ell)}\right].
+  \label{eq:general-boundary-curve}
+\end{equation}
+For the example in Eq.~\eqref{eq:bstar-example},
+\begin{equation}
+  t_*(\ell)
+  =
+  2\ln\bzero-2\ell
+  +\ln\left(1+\frac{\ee^{2\ell}}{b_{\mathrm{sat}}^2}\right).
+  \label{eq:example-boundary-curve}
+\end{equation}
+
+\pagebreak
+\section{The transformed numerical problem}
+
+\subsection{A curved initial-value problem}
+
+The input values lie on \(t=t_*(\ell)\), while the requested solution fills a
+rectangle. This divides the rectangle into two regions:
+\begin{align}
+  t\ge t_*(\ell)
+  &\quad\text{(upper region, forward evolution)},\\
+  t\le t_*(\ell)
+  &\quad\text{(lower region, backward evolution)}.
+\end{align}
+Solving only by activation and forward evolution fills the upper region but
+leaves the lower region empty. A separate backward pass is therefore needed
+to obtain an interpolator over the full plane.
+
+\subsection{Nonlocality is one-sided}
+
+Equation~\eqref{eq:transformed-rg} samples \(\ell+u\) with \(u\ge0\).
+If the \(b_*\) prescription makes \(t_*(\ell)\) decrease with \(\ell\), the
+larger-\(\ell\) values needed by a newly activated node have already been
+activated and evolved. This one-sided dependence gives the discrete system a
+triangular structure and makes explicit marching possible.
+
+\subsection{Endpoint distributions}
+
+The diagonal splitting functions are distributions, not ordinary functions.
+The implementation uses the decomposition
+\begin{equation}
+  P_{aa}(y,t)
+  =
+  P_{aa}^{\mathrm{reg}}(y,t)
+  +P_{aa}^{\delta}(t)\delta(1-y)
+  +D_{aa}^{(0)}(y,t)\left[\frac{1}{1-y}\right]_+
+  +D_{aa}^{(1)}(y,t)
+  \left[\frac{\ln(1-y)}{1-y}\right]_+,
+  \label{eq:kernel-decomposition}
+\end{equation}
+for \(a=q,g\). The delta terms and the self-subtraction implied by the plus
+prescription must be handled separately from the sampled \(0<y<1\) values.
+Treating Eq.~\eqref{eq:kernel-decomposition} as an ordinary pointwise kernel
+would give the wrong evolution.
+
+\subsection{Finite-domain closure}
+
+The exact equation can request arbitrarily large \(b/y\). On a finite lattice,
+the current solver imposes
+\begin{equation}
+  \Jvec(b,\mu)=0
+  \qquad
+  \text{for }b>b_{\mathrm{grid,max}}.
+  \label{eq:zero-closure}
+\end{equation}
+This zero closure is part of the numerical approximation. The user must
+choose \(b_{\mathrm{grid,max}}\) far enough into the region where the physical
+jet function is negligible. A convenient \(b_*\) saturation scale is not, by
+itself, a valid reason to truncate the jet function at the same value.
+
+There is an additional endpoint condition from the diagonal plus
+distributions. If \(\Jvec(b_{\mathrm{grid,max}},t)\) is nonzero while all
+larger-\(b\) values are set abruptly to zero, the shifted real contribution
+vanishes for \(y<1\) but the virtual self-subtraction at \(y=1\) remains. The
+result is logarithmically sensitive to the first \(u\)-grid spacing. A
+grid-convergent use of the sharp closure therefore requires the jet function
+to be numerically zero at the endpoint, not merely outside it. The code does
+not enforce this condition; it must be checked by the user.
+
+\section{General numerical idea}
+
+The method combines a lattice-aligned convolution with explicit evolution on
+both sides of the boundary curve.
+
+\subsection{One lattice for both variables}
+
+Choose \(N\ge2\) points uniformly in \(\ell\), ordered from large to small
+\(b\):
+\begin{align}
+  \ell_i
+  &=
+  \ell_{\max}-(i-1)\Delta\ell,
+  &
+  \Delta\ell
+  &=
+  \frac{\ell_{\max}-\ell_{\min}}{N-1},
+  \label{eq:ell-grid}\\
+  b_i&=\ee^{\ell_i},
+  &
+  t_i&=t_*(\ell_i),
+  \qquad i=1,\ldots,N.
+  \label{eq:paired-grid}
+\end{align}
+The time grid is exactly \((t_1,\ldots,t_N)\). There is one time node for each
+\(\ell\) node, with no sorting, duplicate removal, extra regular time grid, or
+independent final scale. The code requires \(t_{i+1}>t_i\).
+
+Sample the convolution variable with the same spacing,
+\begin{equation}
+  u_m=m\Delta\ell,
+  \qquad
+  y_m=\ee^{-m\Delta\ell}.
+  \label{eq:u-grid}
+\end{equation}
+For \(m=1,\ldots,i-1\),
+\begin{equation}
+  \ell_i+u_m=\ell_{i-m}.
+  \label{eq:lattice-alignment}
+\end{equation}
+Every shifted argument therefore lands exactly on a stored \(b\) node. No
+interpolation is performed inside the convolution.
+
+\subsection{Perturbative kernel tables}
+
+The splitting matrix is assembled as a perturbative series in
+\begin{equation}
+  \as(t)=\frac{\alpha_s(\ee^{t/2})}{4\pi}:
+\end{equation}
+\begin{equation}
+  \Pmat(y,t)
+  =
+  \as\Pmat^{(0)}(y)
+  +\as^2\Pmat^{(1)}(y)
+  +\as^3\Pmat^{(2)}(y)+\cdots.
+  \label{eq:perturbative-series}
+\end{equation}
+The public argument \texttt{order} truncates this series:
+\begin{equation}
+\begin{array}{c|l}
+\texttt{order} & \text{included terms}\\
+\hline
+0 & \as\Pmat^{(0)}\\
+1 & \as\Pmat^{(0)}+\as^2\Pmat^{(1)}\\
+2 & \as\Pmat^{(0)}+\as^2\Pmat^{(1)}+\as^3\Pmat^{(2)}
+\end{array}
+\label{eq:order-map}
+\end{equation}
+At every \(t_n\), the code evaluates
+\(\alpha_s(\mu_n)\) using \texttt{alpha\_s\_func(mu\_n)} and precomputes
+all channel kernels at the non-endpoint samples \(y_m<1\). Delta coefficients
+and the \(y=1\) values needed by the plus subtraction are stored separately.
+Midpoint RK2 additionally precomputes a table at \((t_n+t_{n+1})/2\).
+
+\subsection{Discrete right-hand side}
+
+After the regular, distributional, and quadrature factors have been folded
+into the kernel tables, the node-level right-hand side has the compact form
+\begin{align}
+  \mathcal R_{q,i}^{(n)}
+  &=
+  J_{q,i}^{(n)}
+  \left(\Delta_{qq}^{(n)}-S_{qq}^{(n)}\right)
+  +
+  \sum_{m=1}^{i-1}
+  \left[
+    J_{q,i-m}^{(n)}K_{qq,m}^{(n)}
+    +J_{g,i-m}^{(n)}K_{gq,m}^{(n)}
+  \right],
+  \label{eq:discrete-rhs-q}\\
+  \mathcal R_{g,i}^{(n)}
+  &=
+  J_{g,i}^{(n)}
+  \left(\Delta_{gg}^{(n)}-S_{gg}^{(n)}\right)
+  +
+  \sum_{m=1}^{i-1}
+  \left[
+    J_{q,i-m}^{(n)}K_{qg,m}^{(n)}
+    +J_{g,i-m}^{(n)}K_{gg,m}^{(n)}
+  \right].
+  \label{eq:discrete-rhs-g}
+\end{align}
+Here \(\Delta_{aa}^{(n)}=P_{aa}^{\delta}(t_n)\). For an off-diagonal channel,
+\(K_{ab,m}^{(n)}=\Delta\ell\,y_m^3P_{ab}(y_m,t_n)\). For a diagonal channel,
+the same table entry contains
+\[
+  \Delta\ell\,y_m^3
+  \left[
+    P_{aa}^{\mathrm{reg}}(y_m,t_n)
+    +\frac{D_{aa}^{(0)}(y_m,t_n)}{1-y_m}
+    +\frac{D_{aa}^{(1)}(y_m,t_n)\ln(1-y_m)}{1-y_m}
+  \right].
+\]
+The quantity \(S_{aa}^{(n)}\) is the matching endpoint self-subtraction
+constructed from \(D_{aa}^{(0,1)}(1,t_n)\), including the analytically
+integrated subtraction tail beyond the last sampled shift. Thus the
+convolution routine only takes jet vectors and returns scalar dot products
+for each output component.
+
+\subsection{Upper-region evolution}
+
+At time \(t_n\), nodes \(1,\ldots,n\) are active. Node \(n\) is initialized
+with its exact boundary value, and all active nodes are advanced from \(t_n\)
+to \(t_{n+1}\). Forward Euler uses
+\begin{equation}
+  \Jvec^{(n+1)}
+  =
+  \Jvec^{(n)}+\Delta t_n\Rvec(t_n,\Jvec^{(n)}),
+  \label{eq:euler}
+\end{equation}
+while midpoint RK2 uses
+\begin{align}
+  \bm k_1&=\Rvec(t_n,\Jvec^{(n)}),\\
+  \bm k_2&=\Rvec\left(
+    t_n+\frac{\Delta t_n}{2},
+    \Jvec^{(n)}+\frac{\Delta t_n}{2}\bm k_1
+  \right),\\
+  \Jvec^{(n+1)}
+  &=\Jvec^{(n)}+\Delta t_n\bm k_2.
+  \label{eq:rk2}
+\end{align}
+This pass fills all entries on and above the boundary diagonal.
+
+The current activation routine uses an absolute time tolerance of
+\(10^{-12}\). The exact \(1,\ldots,n\) statement therefore assumes adjacent
+time nodes are separated by more than this tolerance, as they are in the
+tested grids.
+
+\subsection{Lower-region evolution}
+
+The lower region is filled after the forward pass. Starting from the complete
+top-time column \(t_N\), the algorithm visits columns in the order
+\[
+  t_N,\ t_{N-1},\ \ldots,\ t_1.
+\]
+At step \(n\), the values in column \(t_n\) are already known: nodes
+\(i\le n\) came from the upper pass and nodes \(i>n\) came from earlier
+backward steps. Nodes \(i\ge n\) are then evolved through the negative time
+increment \(t_{n-1}-t_n\). This fills the next lower column without changing
+the stored upper-region values or the diagonal boundary data.
+
+The descending-column construction is possible because
+Eqs.~\eqref{eq:discrete-rhs-q}--\eqref{eq:discrete-rhs-g} only refer to node
+indices smaller than or equal to \(i\). Euler and midpoint RK2 are implemented
+with the same sign convention as in the forward pass.
+
+\subsection{Boundary-preserving interpolation}
+
+The stored solution is an \(N\times N\) history for each channel. Away from a
+cell crossed by the boundary diagonal, ordinary bilinear interpolation is
+used. A diagonal cell is split into an upper and a lower triangle, and the
+interpolator uses only the three vertices from the relevant side. This avoids
+mixing independently evolved upper and lower values.
+
+Consequently, every lattice value is returned exactly, and the boundary is
+preserved exactly on the piecewise-linear diagonal connecting its lattice
+nodes. Between nodes, this is the lattice representation of the continuous
+curve, not an additional exact evaluation of the user boundary function.
+
+\input{numerical}
+
+\section{Scope and interpretation}
+
+The solver now provides the full-plane object needed for phenomenological
+use, but its output remains a numerical approximation to
+Eq.~\eqref{eq:bspace-rg}. The main limitations are:
+\begin{itemize}[leftmargin=1.5em]
+  \item the zero closure at \(b_{\mathrm{grid,max}}\), including its
+  incompatibility with a nonzero endpoint value in the plus distributions;
+  \item the lattice quadrature in \(u\), whose error can dominate RK2;
+  \item the fact that refining \(N\) simultaneously refines the \(\ell\) and
+  boundary-derived \(t\) grids;
+  \item a fixed, massless \(n_f=5\) running coupling and splitting scheme, with
+  no heavy-flavor threshold matching or low-scale freezing;
+  \item global running-coupling settings, which make concurrent solver calls
+  with different coupling inputs non-reentrant;
+  \item the need to keep every sampled \(\mu\) in a perturbative region.
+\end{itemize}
+
+The companion \texttt{test\_report.tex} explains the local-kernel convergence
+diagnostic, the physical momentum-sum diagnostic, and their limitations. The
+two diagnostic scripts currently print measurements but do not enforce
+pass/fail thresholds; only \texttt{runtests.jl} is an asserted regression
+suite.
+
+\end{document}

@@ -112,72 +112,93 @@ end
 # with as = alpha_s / (4*pi).
 function spliting_convolution_func(; y::Float64, as::Float64, order::Int64)
 
-    if order == 0
-        as0 = as
-        as1 = 0.0
-        as2 = 0.0
-    elseif order == 1
-        as0 = as
-        as1 = as^2
-        as2 = 0.0
-    elseif order == 2
-        as0 = as
-        as1 = as^2
-        as2 = as^3
-    else
-        error("Unknown order: $order. Expected 0, 1, or 2.")
+    if !(0.0 < y < 1.0)
+        throw(DomainError(y, "y must lie strictly between 0 and 1."))
+    end
+    if !isfinite(as) || as < 0.0
+        throw(DomainError(as, "as must be finite and nonnegative."))
+    end
+    if !(0 <= order <= 2)
+        throw(ArgumentError("order must be 0, 1, or 2."))
     end
 
-    Pqq0Delta_at_1 = 4
-    Pqq0D0_at_1 = 16/3
-
-    Pgg0Delta_at_1 = 23/3
-    Pgg0D0_at_1 = 12
-
-    Pqq1Delta_at_1 = 37.534407157069694
-    Pqq1D0_at_1 = 36.843591342338236
-    Pqq1D1_at_1 = 0
-
-    Pgg1Delta_at_1 = 172.48881220790284
-    Pgg1D0_at_1 = 82.89808052026105
-    Pgg1D1_at_1 = 0
-
-    Pqq2Delta_at_1 = 454.2215
-    Pqq2D0_at_1 = 239.201925
- 
-    Pgg2Delta_at_1 = 1943.426
-    Pgg2D0_at_1 = 538.21575
-
-    Pqq0Reg, Pqq0Delta, Pqq0D0 = splittings_func(x=y, type="Pqq0")
-    Pqq1Reg, Pqq1Delta, Pqq1D0, Pqq1D1 = splittings_func(x=y, type="Pqq1")
-    Pqq2Reg, Pqq2Delta, Pqq2D0 = splittings_func(x=y, type="Pqq2")
-
+    Pqq0Reg, _, Pqq0D0 = splittings_func(x=y, type="Pqq0")
     Pqg0 = splittings_func(x=y, type="Pqg0")
-    Pqg1 = splittings_func(x=y, type="Pqg1")
-    Pqg2 = splittings_func(x=y, type="Pqg2")
-
     Pgq0 = splittings_func(x=y, type="Pgq0")
-    Pgq1 = splittings_func(x=y, type="Pgq1")
-    Pgq2 = splittings_func(x=y, type="Pgq2")
+    Pgg0Reg, _, Pgg0D0 = splittings_func(x=y, type="Pgg0")
 
-    Pgg0Reg, Pgg0Delta, Pgg0D0 = splittings_func(x=y, type="Pgg0")
-    Pgg1Reg, Pgg1Delta, Pgg1D0, Pgg1D1 = splittings_func(x=y, type="Pgg1")
-    Pgg2Reg, Pgg2Delta, Pgg2D0 = splittings_func(x=y, type="Pgg2")
+    PqqReg = as * Pqq0Reg
+    PqqDelta_at_1 = as * 4.0
+    PqqD0 = as * Pqq0D0
+    PqqD0_at_1 = as * (16.0 / 3.0)
+    PqqD1 = 0.0
+    PqqD1_at_1 = 0.0
+    Pqg = as * Pqg0
+    Pgq = as * Pgq0
+
+    PggReg = as * Pgg0Reg
+    PggDelta_at_1 = as * (23.0 / 3.0)
+    PggD0 = as * Pgg0D0
+    PggD0_at_1 = as * 12.0
+    PggD1 = 0.0
+    PggD1_at_1 = 0.0
+
+    if order >= 1
+        as1 = as^2
+        Pqq1Reg, _, Pqq1D0, Pqq1D1 = splittings_func(x=y, type="Pqq1")
+        Pqg1 = splittings_func(x=y, type="Pqg1")
+        Pgq1 = splittings_func(x=y, type="Pgq1")
+        Pgg1Reg, _, Pgg1D0, Pgg1D1 = splittings_func(x=y, type="Pgg1")
+
+        PqqReg += as1 * Pqq1Reg
+        PqqDelta_at_1 += as1 * 37.534407157069694
+        PqqD0 += as1 * Pqq1D0
+        PqqD0_at_1 += as1 * 36.843591342338236
+        PqqD1 += as1 * Pqq1D1
+        Pqg += as1 * Pqg1
+        Pgq += as1 * Pgq1
+
+        PggReg += as1 * Pgg1Reg
+        PggDelta_at_1 += as1 * 172.48881220790284
+        PggD0 += as1 * Pgg1D0
+        PggD0_at_1 += as1 * 82.89808052026105
+        PggD1 += as1 * Pgg1D1
+    end
+
+    if order == 2
+        as2 = as^3
+        Pqq2Reg, _, Pqq2D0 = splittings_func(x=y, type="Pqq2")
+        Pqg2 = splittings_func(x=y, type="Pqg2")
+        Pgq2 = splittings_func(x=y, type="Pgq2")
+        Pgg2Reg, _, Pgg2D0 = splittings_func(x=y, type="Pgg2")
+
+        PqqReg += as2 * Pqq2Reg
+        PqqDelta_at_1 += as2 * 454.2215
+        PqqD0 += as2 * Pqq2D0
+        PqqD0_at_1 += as2 * 239.201925
+        Pqg += as2 * Pqg2
+        Pgq += as2 * Pgq2
+
+        PggReg += as2 * Pgg2Reg
+        PggDelta_at_1 += as2 * 1943.426
+        PggD0 += as2 * Pgg2D0
+        PggD0_at_1 += as2 * 538.21575
+    end
 
     return (
-        PqqReg = as0 * Pqq0Reg + as1 * Pqq1Reg + as2 * Pqq2Reg,
-        PqqDelta_at_1 = as0 * Pqq0Delta_at_1 + as1 * Pqq1Delta_at_1 + as2 * Pqq2Delta_at_1,
-        PqqD0 = as0 * Pqq0D0 + as1 * Pqq1D0 + as2 * Pqq2D0,
-        PqqD0_at_1 = as0 * Pqq0D0_at_1 + as1 * Pqq1D0_at_1 + as2 * Pqq2D0_at_1,
-        PqqD1 = as1 * Pqq1D1,
-        PqqD1_at_1 = as1 * Pqq1D1_at_1,
-        Pqg = as0 * Pqg0 + as1 * Pqg1 + as2 * Pqg2,
-        Pgq = as0 * Pgq0 + as1 * Pgq1 + as2 * Pgq2,
-        PggReg = as0 * Pgg0Reg + as1 * Pgg1Reg + as2 * Pgg2Reg,
-        PggDelta_at_1 = as0 * Pgg0Delta_at_1 + as1 * Pgg1Delta_at_1 + as2 * Pgg2Delta_at_1,
-        PggD0 = as0 * Pgg0D0 + as1 * Pgg1D0 + as2 * Pgg2D0,
-        PggD0_at_1 = as0 * Pgg0D0_at_1 + as1 * Pgg1D0_at_1 + as2 * Pgg2D0_at_1,
-        PggD1 = as1 * Pgg1D1,
-        PggD1_at_1 = as1 * Pgg1D1_at_1,
+        PqqReg = PqqReg,
+        PqqDelta_at_1 = PqqDelta_at_1,
+        PqqD0 = PqqD0,
+        PqqD0_at_1 = PqqD0_at_1,
+        PqqD1 = PqqD1,
+        PqqD1_at_1 = PqqD1_at_1,
+        Pqg = Pqg,
+        Pgq = Pgq,
+        PggReg = PggReg,
+        PggDelta_at_1 = PggDelta_at_1,
+        PggD0 = PggD0,
+        PggD0_at_1 = PggD0_at_1,
+        PggD1 = PggD1,
+        PggD1_at_1 = PggD1_at_1,
     )
 end
