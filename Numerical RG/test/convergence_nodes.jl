@@ -2,6 +2,7 @@ using Printf
 
 include(joinpath(@__DIR__, "..", "numerical_rg.jl"))
 
+const CONVERGENCE_NF_SCHEME = :VFNS
 bstar_func(b) = b / sqrt(1.0 + b^2 / b0^2)
 
 boundary_func(; b, bstar, mu_start) = (
@@ -18,6 +19,7 @@ function build_timed_solution(n_nodes::Int64)
         bstar_func = bstar_func,
         boundary_func = boundary_func,
         order = 2,
+        nf_scheme = CONVERGENCE_NF_SCHEME,
         method = :rk2,
     )
     @printf("SOLVE n_nodes=%d seconds=%.6f\n", n_nodes, result.time)
@@ -93,7 +95,9 @@ warmup_solution = solve_jet_rg(
     bstar_func = bstar_func,
     boundary_func = boundary_func,
     order = 2,
+    nf_scheme = CONVERGENCE_NF_SCHEME,
     method = :rk2,
+    closure_check = :ignore,
 )
 warmup_solution(0.5, sqrt(
     warmup_solution.lattice.mu_i_grid[1] *

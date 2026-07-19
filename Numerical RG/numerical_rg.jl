@@ -1,6 +1,7 @@
-include("../core/constants.jl")
-include("../core/alpha_s.jl")
-include("../NP splitting grid/spliting convolution.jl")
+include("core/constants.jl")
+include("core/anomalous dims.jl")
+include("core/strong coupling.jl")
+include("core/timelike_splitting.jl")
 
 include("grids.jl")
 include("components.jl")

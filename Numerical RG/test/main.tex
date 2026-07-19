@@ -293,7 +293,13 @@ vanishes for \(y<1\) but the virtual self-subtraction at \(y=1\) remains. The
 result is logarithmically sensitive to the first \(u\)-grid spacing. A
 grid-convergent use of the sharp closure therefore requires the jet function
 to be numerically zero at the endpoint, not merely outside it. The code does
-not enforce this condition; it must be checked by the user.
+not silently assume this condition. By default it compares the boundary value
+at \(b_{\mathrm{grid,max}}\) with the largest supplied boundary value and
+emits a warning when the endpoint is not negligible. The public
+\texttt{closure\_check} argument can promote this warning to an error or
+disable it for an intentional closure study. This check detects an obviously
+incompatible boundary, but it does not replace a \(b_{\mathrm{grid,max}}\)
+stability study.
 
 \section{General numerical idea}
 
@@ -363,56 +369,105 @@ The public argument \texttt{order} truncates this series:
 \end{array}
 \label{eq:order-map}
 \end{equation}
-At every \(t_n\), the code evaluates
-\(\alpha_s(\mu_n)\) using \texttt{alpha\_s\_func(mu\_n)} and precomputes
-all channel kernels at the non-endpoint samples \(y_m<1\). Delta coefficients
-and the \(y=1\) values needed by the plus subtraction are stored separately.
-Midpoint RK2 additionally precomputes a table at \((t_n+t_{n+1})/2\).
+The spatial coefficient functions \(\Pmat^{(L)}(y_m;n_f)\) are independent of
+time at fixed \(n_f\). The code caches them for every flavor count required by
+the selected scheme. At each node it evaluates
+\[
+  n_f^{(n)}=\texttt{nf\_func}(\ee^{t_n/2};\texttt{scheme}),
+\]
+selects that coefficient table, and multiplies it by the appropriate powers
+of \(\as(t_n)\). The coupling is evolved with the same scheme, so a kernel row
+and its coupling can never use inconsistent flavor counts. Delta coefficients
+and the \(y=1\) coefficients needed by the plus subtraction are stored
+separately. Midpoint RK2 additionally assembles rows at
+\((t_n+t_{n+1})/2\), reusing the same spatial caches.
 
 \subsection{Discrete right-hand side}
 
-After the regular, distributional, and quadrature factors have been folded
-into the kernel tables, the node-level right-hand side has the compact form
-\begin{align}
-  \mathcal R_{q,i}^{(n)}
-  &=
-  J_{q,i}^{(n)}
-  \left(\Delta_{qq}^{(n)}-S_{qq}^{(n)}\right)
-  +
-  \sum_{m=1}^{i-1}
-  \left[
-    J_{q,i-m}^{(n)}K_{qq,m}^{(n)}
-    +J_{g,i-m}^{(n)}K_{gq,m}^{(n)}
-  \right],
-  \label{eq:discrete-rhs-q}\\
-  \mathcal R_{g,i}^{(n)}
-  &=
-  J_{g,i}^{(n)}
-  \left(\Delta_{gg}^{(n)}-S_{gg}^{(n)}\right)
-  +
-  \sum_{m=1}^{i-1}
-  \left[
-    J_{q,i-m}^{(n)}K_{qg,m}^{(n)}
-    +J_{g,i-m}^{(n)}K_{gg,m}^{(n)}
-  \right].
-  \label{eq:discrete-rhs-g}
-\end{align}
-Here \(\Delta_{aa}^{(n)}=P_{aa}^{\delta}(t_n)\). For an off-diagonal channel,
-\(K_{ab,m}^{(n)}=\Delta\ell\,y_m^3P_{ab}(y_m,t_n)\). For a diagonal channel,
-the same table entry contains
-\[
+Define the sampled subtraction weights
+\begin{equation}
+  w_m^{(0)}=\Delta\ell\,\frac{y_m}{1-y_m},
+  \qquad
+  w_m^{(1)}=\Delta\ell\,
+  \frac{y_m\ln(1-y_m)}{1-y_m}.
+\end{equation}
+For a diagonal channel, let \(K_{aa,m}^{(n)}\) contain the sampled real
+regular and plus-distribution terms,
+\begin{equation}
+  K_{aa,m}^{(n)}
+  =
   \Delta\ell\,y_m^3
   \left[
     P_{aa}^{\mathrm{reg}}(y_m,t_n)
     +\frac{D_{aa}^{(0)}(y_m,t_n)}{1-y_m}
     +\frac{D_{aa}^{(1)}(y_m,t_n)\ln(1-y_m)}{1-y_m}
   \right].
-\]
-The quantity \(S_{aa}^{(n)}\) is the matching endpoint self-subtraction
-constructed from \(D_{aa}^{(0,1)}(1,t_n)\), including the analytically
-integrated subtraction tail beyond the last sampled shift. Thus the
-convolution routine only takes jet vectors and returns scalar dot products
-for each output component.
+\end{equation}
+For an off-diagonal channel,
+\(K_{ab,m}^{(n)}=\Delta\ell\,y_m^3P_{ab}(y_m,t_n)\).
+The zero-closure subtraction that has no shifted lattice value is
+\begin{align}
+  C_i^{(0)}
+  &=
+  \sum_{m=i}^{N-1}w_m^{(0)}
+  -\ln(1-y_{N-1}),\\
+  C_i^{(1)}
+  &=
+  \sum_{m=i}^{N-1}w_m^{(1)}
+  -\frac12\ln^2(1-y_{N-1}).
+\end{align}
+The final terms analytically integrate the subtraction from the last sampled
+shift to \(y=0\). Pair the sampled diagonal real and virtual terms as
+\begin{equation}
+  \mathcal D_{aa,i,m}^{(n)}
+  =
+  J_{a,i-m}^{(n)}K_{aa,m}^{(n)}
+  -
+  J_{a,i}^{(n)}
+  \left[
+    D_{aa}^{(0)}(1,t_n)w_m^{(0)}
+    +D_{aa}^{(1)}(1,t_n)w_m^{(1)}
+  \right].
+  \label{eq:paired-diagonal}
+\end{equation}
+With these definitions, the two right-hand sides are
+\begin{align}
+  \mathcal R_{q,i}^{(n)}
+  &=
+  J_{q,i}^{(n)}
+  \left[
+    \Delta_{qq}^{(n)}
+    -D_{qq}^{(0)}(1,t_n)C_i^{(0)}
+    -D_{qq}^{(1)}(1,t_n)C_i^{(1)}
+  \right]
+  +
+  \sum_{m=1}^{i-1}
+  \left[
+    \mathcal D_{qq,i,m}^{(n)}
+    +J_{g,i-m}^{(n)}K_{gq,m}^{(n)}
+  \right],
+  \label{eq:discrete-rhs-q}\\
+  \mathcal R_{g,i}^{(n)}
+  &=
+  J_{g,i}^{(n)}
+  \left[
+    \Delta_{gg}^{(n)}
+    -D_{gg}^{(0)}(1,t_n)C_i^{(0)}
+    -D_{gg}^{(1)}(1,t_n)C_i^{(1)}
+  \right]
+  +
+  \sum_{m=1}^{i-1}
+  \left[
+    J_{q,i-m}^{(n)}K_{qg,m}^{(n)}
+    +\mathcal D_{gg,i,m}^{(n)}
+  \right].
+  \label{eq:discrete-rhs-g}
+\end{align}
+Here \(\Delta_{aa}^{(n)}=P_{aa}^{\delta}(t_n)\). Pairing each available
+shifted real value with its virtual subtraction in the same summand makes the
+plus prescription explicit and reduces cancellation between separately
+accumulated large sums. The convolution routine itself takes jet vectors and
+returns scalar dot products for each output component.
 
 \subsection{Upper-region evolution}
 
@@ -438,10 +493,9 @@ while midpoint RK2 uses
 \end{align}
 This pass fills all entries on and above the boundary diagonal.
 
-The current activation routine uses an absolute time tolerance of
-\(10^{-12}\). The exact \(1,\ldots,n\) statement therefore assumes adjacent
-time nodes are separated by more than this tolerance, as they are in the
-tested grids.
+Activation is index-based: iteration \(n\) writes boundary node \(n\) and
+marks exactly that node active. It does not scan floating-point time values or
+use a time tolerance.
 
 \subsection{Lower-region evolution}
 
@@ -474,7 +528,217 @@ preserved exactly on the piecewise-linear diagonal connecting its lattice
 nodes. Between nodes, this is the lattice representation of the continuous
 curve, not an additional exact evaluation of the user boundary function.
 
-\input{numerical}
+\clearpage
+\section{Numerical implementation and use}
+\label{sec:numerical-implementation}
+
+\subsection{Code organization}
+
+\begin{table}[H]
+\centering
+\caption{Numerical RG source files.}
+\label{tab:source-files}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily}l X@{}}
+\toprule
+\textrm{File} & \textrm{Responsibility}\\
+\midrule
+numerical\_rg.jl
+  & Entry file that loads the complete standalone implementation.\\
+core/constants.jl
+  & Color factors, reference coupling, and temporary physical masses.\\
+core/anomalous dims.jl
+  & Analytic \(n_f\)-dependent beta-function and cusp coefficients.\\
+core/strong coupling.jl
+  & Flavor-scheme selection and numerical evolution of \(\alpha_s\).\\
+core/timelike\_splitting.jl
+  & \(n_f\)-dependent LO--NNLO time-like splitting functions, including
+    regular, delta, and plus-distribution pieces.\\
+grids.jl
+  & Builds the paired \(\ell_i,b_i,b_{*,i},\mu_i,t_i\) lattice and samples
+    boundary data.\\
+components.jl
+  & Precomputes node and midpoint splitting-kernel tables.\\
+convolution.jl
+  & Applies a precomputed row to quark and gluon jet vectors.\\
+solver.jl
+  & Evolves the upper and lower regions and constructs the solution.\\
+interpolation.jl
+  & Provides boundary-preserving interpolation of both channels.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The folder deliberately has no local \texttt{Project.toml} or
+\texttt{Manifest.toml}. Its nonstandard Julia dependencies are
+\texttt{DifferentialEquations}, \texttt{PolyLog}, and \texttt{QuadGK}; they
+must be available in the Julia environment from which the code is run.
+
+\subsection{Flavor schemes and running coupling}
+
+The public keyword \texttt{nf\_scheme} accepts exactly two symbols:
+\texttt{:VFNS} and \texttt{:nf5}. The single scale-to-flavor function is
+\begin{equation}
+n_f(\mu;\texttt{:VFNS})=
+\begin{cases}
+3,&\mu<m_c,\\
+4,&m_c\le\mu<m_b,\\
+5,&m_b\le\mu<m_t,\\
+6,&m_t\le\mu,
+\end{cases}
+\qquad
+n_f(\mu;\texttt{:nf5})=5.
+\label{eq:nf-schemes}
+\end{equation}
+The current temporary values are
+\(m_c=1.27\,\mathrm{GeV}\),
+\(m_b=4.18\,\mathrm{GeV}\), and
+\(m_t=172.76\,\mathrm{GeV}\). They are defined only in
+\texttt{core/constants.jl}.
+
+The coupling obeys
+\begin{equation}
+  \frac{\dd\alpha_s}{\dd\ln\mu}
+  =
+  -2\alpha_s
+  \sum_{k=0}^{K-1}
+  \beta_k\!\left(n_f(\mu)\right)
+  \left(\frac{\alpha_s}{4\pi}\right)^{k+1}.
+\label{eq:alpha-running}
+\end{equation}
+It is solved numerically from the reference pair
+\((M_Z,\alpha_s(M_Z))=(91.1876\,\mathrm{GeV},0.118)\) by default. In VFNS,
+the ODE solver stops exactly at every crossed heavy-quark mass and restarts
+with the new beta coefficients. The coupling is continuous at each threshold.
+No higher-order finite decoupling coefficient is currently applied, so this
+is continuous threshold switching rather than a complete precision matching
+prescription.
+
+Both the coupling and every splitting-kernel row call
+\texttt{nf\_func} at their own scale. There is no independent integer
+\texttt{nf} argument in the production solver.
+
+\subsection{Minimal use}
+
+\begin{lstlisting}
+include("Numerical RG/numerical_rg.jl")
+
+b_sat = 1.0 # GeV^-1
+bstar_func(b) = b / sqrt(1.0 + b^2 / b_sat^2)
+
+boundary_func(; b, bstar, mu_start) = (
+    exp(-2.0 * b),        # Jq(b, mu_start)
+    0.5 * exp(-3.0 * b), # Jg(b, mu_start)
+)
+
+solution = solve_jet_rg(
+    n_nodes = 1000,
+    b_min = 0.001,
+    b_max = 30.0,
+    bstar_func = bstar_func,
+    boundary_func = boundary_func,
+    order = 2,
+    nf_scheme = :VFNS, # or :nf5
+    method = :rk2,
+)
+
+both = solution(1.0, 10.0)
+jq = both.jq
+jg = both.jg
+\end{lstlisting}
+
+The boundary function receives \texttt{b}, \texttt{bstar}, and
+\texttt{mu\_start}, and must return the finite pair \texttt{(jq,jg)}.
+The returned object is callable as \texttt{solution(b,mu)}. It returns both
+components, or one may request \texttt{component = :q} or
+\texttt{component = :g}. Queries outside the stored rectangle raise a
+\texttt{DomainError}; no extrapolation is performed.
+
+\subsection{Public inputs}
+
+\begin{table}[H]
+\centering
+\caption{Public keyword arguments of \texttt{solve\_jet\_rg}.}
+\label{tab:solver-inputs}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily}l >{\raggedright\arraybackslash}p{0.19\textwidth} X@{}}
+\toprule
+\textrm{Argument} & \textrm{Allowed value} & \textrm{Meaning}\\
+\midrule
+n\_nodes
+  & integer \(\ge2\)
+  & Number of paired spatial and time nodes.\\
+b\_min, b\_max
+  & \(0<b_{\min}<b_{\max}\)
+  & Stored \(b\) interval. Zero closure is imposed beyond \(b_{\max}\).\\
+bstar\_func
+  & function
+  & Defines \(b_*(b)\); its sampled canonical times must be strictly ordered.\\
+boundary\_func
+  & function
+  & Returns \texttt{(jq,jg)} on \(\mu_*(b)=b_0/b_*(b)\).\\
+order
+  & \(0,1,2\)
+  & Highest splitting order: LO, NLO, or NNLO, including all lower orders.\\
+nf\_scheme
+  & \texttt{:VFNS} or \texttt{:nf5}
+  & Flavor prescription used consistently by \(\alpha_s\) and the kernels;
+    default \texttt{:VFNS}.\\
+method
+  & \texttt{:euler} or \texttt{:rk2}
+  & Explicit time integrator; default \texttt{:rk2}.\\
+alpha\_s\_ref
+  & positive Float64
+  & Coupling at \texttt{alpha\_s\_mu\_ref}; default \(0.118\).\\
+alpha\_s\_mu\_ref
+  & positive Float64
+  & Coupling reference scale; default \(M_Z\).\\
+alpha\_s\_order
+  & \(1,\ldots,5\)
+  & Number of beta-function loops; default \(4\).\\
+alpha\_s\_reltol, alpha\_s\_abstol
+  & positive Float64
+  & ODE tolerances; defaults \(10^{-10}\) and \(10^{-12}\).\\
+alpha\_s\_max
+  & positive Float64
+  & Safety ceiling on every sampled coupling; default \(1.0\).\\
+closure\_check
+  & \texttt{:warn}, \texttt{:error}, \texttt{:ignore}
+  & Policy when the boundary is not negligible at \(b_{\max}\).\\
+closure\_rtol, closure\_atol
+  & nonnegative Float64
+  & Relative and absolute endpoint tolerances.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+There are no separate \texttt{mu\_final}, \texttt{t\_start}, or
+\texttt{max\_delta\_t} inputs. The scale interval and time steps are fixed by
+\(b_{\min}\), \(b_{\max}\), \(N\), and \texttt{bstar\_func}.
+
+\subsection{Computation and reproducibility}
+
+Kernel coefficients are built in parallel, and independent active-node
+right-hand sides use a small number of Julia tasks. Individual dot products
+remain serial and use SIMD. Kernel tables and solution histories require
+\(O(N^2)\) memory; the present full-plane evolution has \(O(N^3)\) leading
+work.
+
+One possible installation and test sequence is
+\begin{lstlisting}
+cd "Numerical RG"
+julia -e "using Pkg; Pkg.add([
+    "DifferentialEquations", "PolyLog", "QuadGK"
+])"
+julia --threads=auto test/runtests.jl
+julia --threads=auto test/analytic_validation.jl
+julia test/momentum_sum_check.jl
+julia test/paper_moment_check.jl
+julia --threads=auto test/validation_metrics.jl
+\end{lstlisting}
+The asserted suite currently contains 542 checks. It covers both flavor
+schemes, threshold continuity, one-loop analytic running, comparison with the
+legacy coupling, fixed-\(n_f\) published splitting moments, kernel-table
+scheme propagation, exact local and nonlocal evolution, physical-convolution
+refinement, closure policy, and interpolation.
 
 \section{Scope and interpretation}
 
@@ -487,17 +751,18 @@ Eq.~\eqref{eq:bspace-rg}. The main limitations are:
   \item the lattice quadrature in \(u\), whose error can dominate RK2;
   \item the fact that refining \(N\) simultaneously refines the \(\ell\) and
   boundary-derived \(t\) grids;
-  \item a fixed, massless \(n_f=5\) running coupling and splitting scheme, with
-  no heavy-flavor threshold matching or low-scale freezing;
-  \item global running-coupling settings, which make concurrent solver calls
-  with different coupling inputs non-reentrant;
+  \item the VFNS option uses continuous threshold switching but no finite
+  higher-order decoupling coefficients, while \texttt{:nf5} is fixed flavor;
+  \item the heavy-quark masses are temporary local constants and there is no
+  low-scale freezing;
   \item the need to keep every sampled \(\mu\) in a perturbative region.
 \end{itemize}
 
-The companion \texttt{test\_report.tex} explains the local-kernel convergence
-diagnostic, the physical momentum-sum diagnostic, and their limitations. The
-two diagnostic scripts currently print measurements but do not enforce
-pass/fail thresholds; only \texttt{runtests.jl} is an asserted regression
-suite.
+The companion \texttt{test\_report.tex} explains the local and nonlocal
+matrix-exponential convergence tests, the smooth physical-convolution test,
+the Mellin-moment checks, and the finite-domain closure study. Their core
+acceptance criteria are part of the asserted \texttt{runtests.jl} suite;
+\texttt{validation\_metrics.jl} prints the principal numerical values used in
+the report.
 
 \end{document}

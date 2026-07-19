@@ -18,6 +18,12 @@ function build_local_delta_table(
         zeros(Float64, n_nodes, n_shift),
         zeros(Float64, n_nodes),
         zeros(Float64, n_nodes),
+        zeros(Float64, n_nodes),
+        zeros(Float64, n_nodes),
+        zeros(Float64, n_shift),
+        zeros(Float64, n_shift),
+        zeros(Float64, n_nodes),
+        zeros(Float64, n_nodes),
     )
 end
 
@@ -121,6 +127,7 @@ end
 function run_momentum_test(
     n_nodes::Int64,
     order::Int64;
+    nf_scheme::Symbol,
     grid_b_max::Float64 = 30.0,
 )
 
@@ -134,7 +141,9 @@ function run_momentum_test(
         bstar_func = bstar_func,
         boundary_func = momentum_boundary,
         order = order,
+        nf_scheme = nf_scheme,
         method = :rk2,
+        closure_check = :ignore,
     )
 
     for maximum_b in (0.03, 0.3)
@@ -142,7 +151,8 @@ function run_momentum_test(
             q_metrics = triangle_relative_metrics(solution, :q, region, maximum_b)
             g_metrics = triangle_relative_metrics(solution, :g, region, maximum_b)
             @printf(
-                "MOMENTUM n_nodes=%d grid_b_max=%.3g order=%d b_max_eval=%.3g region=%s q_rms=%.8e q_max=%.8e g_rms=%.8e g_max=%.8e\n",
+                "MOMENTUM scheme=%s n_nodes=%d grid_b_max=%.3g order=%d b_max_eval=%.3g region=%s q_rms=%.8e q_max=%.8e g_rms=%.8e g_max=%.8e\n",
+                string(nf_scheme),
                 n_nodes,
                 grid_b_max,
                 order,
@@ -158,6 +168,7 @@ function run_momentum_test(
 end
 
 println("Julia threads: ", Threads.nthreads())
+const VALIDATION_NF_SCHEME = :VFNS
 
 for method in (:euler, :rk2)
     previous = nothing
@@ -197,11 +208,13 @@ for case in momentum_cases
     run_momentum_test(
         case.n_nodes,
         0,
+        nf_scheme = VALIDATION_NF_SCHEME,
         grid_b_max = case.grid_b_max,
     )
     run_momentum_test(
         case.n_nodes,
         2,
+        nf_scheme = VALIDATION_NF_SCHEME,
         grid_b_max = case.grid_b_max,
     )
 end

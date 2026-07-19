@@ -17,6 +17,38 @@ end
     return result
 end
 
+@inline function diagonal_convolution_dot(
+    shifted_vec::AbstractVector{Float64},
+    current::Float64,
+    kernel_vec::AbstractVector{Float64},
+    d0_sub_weight_vec::AbstractVector{Float64},
+    d1_sub_weight_vec::AbstractVector{Float64},
+    d0_at_1::Float64,
+    d1_at_1::Float64,
+)
+
+    if axes(shifted_vec, 1) != axes(kernel_vec, 1) ||
+       axes(shifted_vec, 1) != axes(d0_sub_weight_vec, 1) ||
+       axes(shifted_vec, 1) != axes(d1_sub_weight_vec, 1)
+        throw(DimensionMismatch("Diagonal convolution vectors must have matching axes."))
+    end
+
+    result = 0.0
+    @inbounds @simd for i in eachindex(
+        shifted_vec,
+        kernel_vec,
+        d0_sub_weight_vec,
+        d1_sub_weight_vec,
+    )
+        subtraction = (
+            d0_at_1 * d0_sub_weight_vec[i] +
+            d1_at_1 * d1_sub_weight_vec[i]
+        )
+        result += shifted_vec[i] * kernel_vec[i] - current * subtraction
+    end
+    return result
+end
+
 const MAX_RHS_TASKS = 4
 const MIN_PARALLEL_RHS_NODES = 128
 
@@ -28,13 +60,23 @@ const MIN_PARALLEL_RHS_NODES = 128
     node_index::Int64,
 )
 
+    qq_closure_subtraction = (
+        kernels.qq_d0_at_1_vec[time_index] *
+        kernels.d0_closure_factor_vec[node_index] +
+        kernels.qq_d1_at_1_vec[time_index] *
+        kernels.d1_closure_factor_vec[node_index]
+    )
+    gg_closure_subtraction = (
+        kernels.gg_d0_at_1_vec[time_index] *
+        kernels.d0_closure_factor_vec[node_index] +
+        kernels.gg_d1_at_1_vec[time_index] *
+        kernels.d1_closure_factor_vec[node_index]
+    )
     rhs_q = jq[node_index] * (
-        kernels.qq_delta_at_1_vec[time_index] -
-        kernels.qq_self_sub_vec[time_index]
+        kernels.qq_delta_at_1_vec[time_index] - qq_closure_subtraction
     )
     rhs_g = jg[node_index] * (
-        kernels.gg_delta_at_1_vec[time_index] -
-        kernels.gg_self_sub_vec[time_index]
+        kernels.gg_delta_at_1_vec[time_index] - gg_closure_subtraction
     )
 
     n_shift = node_index - 1
@@ -45,11 +87,27 @@ const MIN_PARALLEL_RHS_NODES = 128
     jq_shifted_vec = shifted_values(jq, node_index)
     jg_shifted_vec = shifted_values(jg, node_index)
 
-    rhs_q += convolution_dot(jq_shifted_vec, @view kernels.qq[time_index, 1:n_shift])
+    rhs_q += diagonal_convolution_dot(
+        jq_shifted_vec,
+        jq[node_index],
+        @view(kernels.qq[time_index, 1:n_shift]),
+        @view(kernels.d0_sub_weight_vec[1:n_shift]),
+        @view(kernels.d1_sub_weight_vec[1:n_shift]),
+        kernels.qq_d0_at_1_vec[time_index],
+        kernels.qq_d1_at_1_vec[time_index],
+    )
     rhs_q += convolution_dot(jg_shifted_vec, @view kernels.gq[time_index, 1:n_shift])
 
     rhs_g += convolution_dot(jq_shifted_vec, @view kernels.qg[time_index, 1:n_shift])
-    rhs_g += convolution_dot(jg_shifted_vec, @view kernels.gg[time_index, 1:n_shift])
+    rhs_g += diagonal_convolution_dot(
+        jg_shifted_vec,
+        jg[node_index],
+        @view(kernels.gg[time_index, 1:n_shift]),
+        @view(kernels.d0_sub_weight_vec[1:n_shift]),
+        @view(kernels.d1_sub_weight_vec[1:n_shift]),
+        kernels.gg_d0_at_1_vec[time_index],
+        kernels.gg_d1_at_1_vec[time_index],
+    )
 
     return rhs_q, rhs_g
 end

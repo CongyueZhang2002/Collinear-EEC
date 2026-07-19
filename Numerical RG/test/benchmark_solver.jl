@@ -3,6 +3,7 @@ using LinearAlgebra
 
 include(joinpath(@__DIR__, "..", "numerical_rg.jl"))
 
+const BENCHMARK_NF_SCHEME = :VFNS
 n_nodes = isempty(ARGS) ? 1000 : parse(Int64, ARGS[1])
 if length(ARGS) >= 2
     BLAS.set_num_threads(parse(Int64, ARGS[2]))
@@ -28,7 +29,9 @@ warmup_solution = solve_jet_rg(
     bstar_func = bstar_func,
     boundary_func = boundary_func,
     order = 2,
+    nf_scheme = BENCHMARK_NF_SCHEME,
     method = :rk2,
+    closure_check = :ignore,
 )
 warmup_mu = sqrt(
     warmup_solution.lattice.mu_i_grid[1] *
@@ -49,6 +52,7 @@ timed_result = @timed solve_jet_rg(
     bstar_func = bstar_func,
     boundary_func = boundary_func,
     order = 2,
+    nf_scheme = BENCHMARK_NF_SCHEME,
     method = :rk2,
 )
 solution = timed_result.value

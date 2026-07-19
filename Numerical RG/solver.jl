@@ -1,24 +1,42 @@
-function unit_boundary_value(; b::Float64, bstar::Float64, mu_start::Float64)
-    return 1.0, 1.0
-end
-
-function activate_nodes!(
-    jq::Vector{Float64},
-    jg::Vector{Float64},
-    active::AbstractVector{Bool},
-    jq_bc::AbstractVector{Float64},
-    jg_bc::AbstractVector{Float64},
-    mu_i_grid::AbstractVector{Float64},
-    t::Float64;
-    activation_tol::Float64 = 1e-12,
+function check_zero_closure(
+    boundary_values;
+    closure_check::Symbol,
+    closure_rtol::Float64,
+    closure_atol::Float64,
 )
 
-    for i in eachindex(active)
-        if !active[i] && t + activation_tol >= log(mu_i_grid[i]^2)
-            jq[i] = jq_bc[i]
-            jg[i] = jg_bc[i]
-            active[i] = true
+    if !(closure_check in (:warn, :error, :ignore))
+        throw(ArgumentError("closure_check must be :warn, :error, or :ignore."))
+    end
+    if !isfinite(closure_rtol) || closure_rtol < 0.0
+        throw(ArgumentError("closure_rtol must be finite and nonnegative."))
+    end
+    if !isfinite(closure_atol) || closure_atol < 0.0
+        throw(ArgumentError("closure_atol must be finite and nonnegative."))
+    end
+    closure_check == :ignore && return nothing
+
+    boundary_scale = max(
+        maximum(abs, boundary_values.jq_bc),
+        maximum(abs, boundary_values.jg_bc),
+    )
+    endpoint_value = max(
+        abs(boundary_values.jq_bc[1]),
+        abs(boundary_values.jg_bc[1]),
+    )
+    tolerance = closure_atol + closure_rtol * boundary_scale
+
+    if endpoint_value > tolerance
+        message = (
+            "Zero closure requires the boundary value at b_max to be negligible. " *
+            "Found endpoint magnitude $endpoint_value with tolerance $tolerance. " *
+            "Increase b_max, use a decaying boundary, or set closure_check = :ignore " *
+            "only for an intentional closure study."
+        )
+        if closure_check == :error
+            throw(ArgumentError(message))
         end
+        @warn message
     end
 
     return nothing
@@ -105,13 +123,20 @@ end
 
 function solve_stepwise_rg(;
     lattice::LatticeGrid,
-    boundary_func::Function = unit_boundary_value,
+    boundary_func::Function,
     order::Int64,
-    alpha_s_Z_value::Float64 = 0.118,
-    alpha_s_loops::Int64 = 4,
+    nf_scheme::Symbol = :VFNS,
+    alpha_s_ref::Float64 = DEFAULT_ALPHA_S_MZ,
+    alpha_s_mu_ref::Float64 = MZ,
+    alpha_s_order::Int64 = 4,
+    alpha_s_reltol::Float64 = 1.0e-10,
+    alpha_s_abstol::Float64 = 1.0e-12,
     alpha_s_max::Float64 = 1.0,
     method::Symbol = :euler,
     store_history::Bool = true,
+    closure_check::Symbol = :warn,
+    closure_rtol::Float64 = 1.0e-6,
+    closure_atol::Float64 = 1.0e-12,
 )
 
     if !(method in (:euler, :rk2))
@@ -119,14 +144,24 @@ function solve_stepwise_rg(;
     end
 
     boundary_values = build_boundary_values(grid = lattice, boundary_func = boundary_func)
+    check_zero_closure(
+        boundary_values,
+        closure_check = closure_check,
+        closure_rtol = closure_rtol,
+        closure_atol = closure_atol,
+    )
     time_grid = lattice.t_grid
     kernel_table = build_splitting_kernel_table(
         delta_ell = lattice.delta_ell,
         n_nodes = lattice.n_nodes,
         t_grid = time_grid,
         order = order,
-        alpha_s_Z_value = alpha_s_Z_value,
-        alpha_s_loops = alpha_s_loops,
+        nf_scheme = nf_scheme,
+        alpha_s_ref = alpha_s_ref,
+        alpha_s_mu_ref = alpha_s_mu_ref,
+        alpha_s_order = alpha_s_order,
+        alpha_s_reltol = alpha_s_reltol,
+        alpha_s_abstol = alpha_s_abstol,
         alpha_s_max = alpha_s_max,
     )
 
@@ -144,8 +179,12 @@ function solve_stepwise_rg(;
             n_nodes = lattice.n_nodes,
             t_grid = midpoint_grid,
             order = order,
-            alpha_s_Z_value = alpha_s_Z_value,
-            alpha_s_loops = alpha_s_loops,
+            nf_scheme = nf_scheme,
+            alpha_s_ref = alpha_s_ref,
+            alpha_s_mu_ref = alpha_s_mu_ref,
+            alpha_s_order = alpha_s_order,
+            alpha_s_reltol = alpha_s_reltol,
+            alpha_s_abstol = alpha_s_abstol,
             alpha_s_max = alpha_s_max,
         )
     elseif method == :euler
@@ -193,16 +232,9 @@ function _evolve_stepwise_rg(;
 
     for n in 1:lattice.n_nodes
         t_now = time_grid[n]
-
-        activate_nodes!(
-            jq,
-            jg,
-            active,
-            boundary_values.jq_bc,
-            boundary_values.jg_bc,
-            lattice.mu_i_grid,
-            t_now,
-        )
+        jq[n] = boundary_values.jq_bc[n]
+        jg[n] = boundary_values.jg_bc[n]
+        active[n] = true
 
         if store_history
             jq_history[:, n] .= jq
@@ -294,27 +326,42 @@ function _evolve_stepwise_rg(;
 end
 
 """
-    solve_jet_rg(; n_nodes, b_min, b_max, bstar_func, boundary_func, order, ...)
+    solve_jet_rg(; n_nodes, b_min, b_max, bstar_func, boundary_func, order,
+                 nf_scheme=:VFNS, ...)
 
 Solve on the full rectangle bounded by the endpoint scales of
 `mu_start(b) = b0 / bstar_func(b)`. `boundary_func(; b, bstar, mu_start)`
 must return `(jq, jg)`. The returned `StepwiseRGSolution` is callable as
 `solution(b, mu)`.
 
+`nf_scheme` controls both the time-like splitting kernels and numerical
+coupling. `:VFNS` changes the active flavor count at the heavy-quark
+thresholds; `:nf5` keeps five active flavors at every scale.
+
 The convolution uses zero closure for `b > b_max`, so `b_max` must be large
-enough that the physical jet function is negligible.
+enough that the physical jet function is negligible. `closure_check = :warn`
+compares the supplied endpoint boundary value with the full boundary scale;
+use `:error` to enforce the check or `:ignore` only for an intentional closure
+study.
 """
 function solve_jet_rg(;
     n_nodes::Int64,
     b_min::Float64,
     b_max::Float64,
     bstar_func::Function,
-    boundary_func::Function = unit_boundary_value,
+    boundary_func::Function,
     order::Int64,
-    alpha_s_Z_value::Float64 = 0.118,
-    alpha_s_loops::Int64 = 4,
+    nf_scheme::Symbol = :VFNS,
+    alpha_s_ref::Float64 = DEFAULT_ALPHA_S_MZ,
+    alpha_s_mu_ref::Float64 = MZ,
+    alpha_s_order::Int64 = 4,
+    alpha_s_reltol::Float64 = 1.0e-10,
+    alpha_s_abstol::Float64 = 1.0e-12,
     alpha_s_max::Float64 = 1.0,
     method::Symbol = :rk2,
+    closure_check::Symbol = :warn,
+    closure_rtol::Float64 = 1.0e-6,
+    closure_atol::Float64 = 1.0e-12,
 )
 
     lattice = build_lattice_grid(
@@ -328,10 +375,17 @@ function solve_jet_rg(;
         lattice = lattice,
         boundary_func = boundary_func,
         order = order,
-        alpha_s_Z_value = alpha_s_Z_value,
-        alpha_s_loops = alpha_s_loops,
+        nf_scheme = nf_scheme,
+        alpha_s_ref = alpha_s_ref,
+        alpha_s_mu_ref = alpha_s_mu_ref,
+        alpha_s_order = alpha_s_order,
+        alpha_s_reltol = alpha_s_reltol,
+        alpha_s_abstol = alpha_s_abstol,
         alpha_s_max = alpha_s_max,
         method = method,
         store_history = true,
+        closure_check = closure_check,
+        closure_rtol = closure_rtol,
+        closure_atol = closure_atol,
     )
 end

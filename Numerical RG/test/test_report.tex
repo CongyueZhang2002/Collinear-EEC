@@ -7,27 +7,27 @@
 \usepackage{amsmath,amssymb,bm}
 \usepackage{booktabs}
 \usepackage{xcolor}
+\usepackage{float}
 \usepackage{hyperref}
 \usepackage{enumitem}
-\usepackage{placeins}
 
 \definecolor{accent}{RGB}{25,75,115}
-\definecolor{lightaccent}{RGB}{235,244,249}
-\definecolor{warning}{RGB}{145,80,20}
 
 \hypersetup{
   colorlinks=true,
   linkcolor=accent,
+  citecolor=accent,
   urlcolor=accent
 }
 
 \newcommand{\dd}{\mathrm{d}}
 \newcommand{\as}{a_s}
+\newcommand{\ee}{\mathrm{e}}
 \newcommand{\Jvec}{\bm J}
 \newcommand{\Pmat}{\bm P}
+\newcommand{\Mmat}{\bm M}
 
-\title{\textbf{Numerical RG Solver: Validation Report}\\
-\large Targeted diagnostics of time marching and the physical convolution}
+\title{\textbf{Validation of the Numerical \(b\)-Space Jet Evolution Solver}}
 \author{}
 \date{\today}
 
@@ -35,58 +35,42 @@
 
 \maketitle
 
-\begin{center}
-\fcolorbox{accent}{lightaccent}{
-\begin{minipage}{0.92\textwidth}
-\textbf{Main conclusion.}
-On an exactly solvable local problem with an affine boundary line, Euler and
-midpoint RK2 show the expected first- and second-order convergence on both
-sides of the line. Direct Mellin moments also verify the implemented channel
-orientation and momentum sums. These are targeted diagnostics, not a proof of
-the complete nonlocal solver. In particular, the lattice
-\(J_q=J_g=b\) study is strongly affected by imposing a sharp zero closure on
-a nonzero endpoint value.
-\end{minipage}}
-\end{center}
+\begin{abstract}
+This report validates a numerical solver for the coupled quark--gluon
+renormalization-group evolution of jet functions in impact-parameter space.
+The running coupling and flavor thresholds are checked against analytic
+relations, the time-like splitting kernels are compared with published Mellin
+moments, and the discrete convolution is compared with direct continuum
+quadrature. Exact manufactured solutions test forward and backward evolution
+over the full numerical plane. An end-to-end calculation with physical
+splitting kernels then measures grid and large-\(b\) closure effects.
+
+The kernel moments agree with their published references to a maximum relative
+difference of \(1.15\times10^{-4}\) through next-to-next-to-leading order
+(NNLO). Euler and the second-order midpoint Runge--Kutta method (RK2) show
+first- and second-order time convergence, respectively. The main numerical
+limitation is the spatial convolution: with \(n_b=257\) spatial nodes, its relative difference
+from continuum quadrature is \(2.89\%\)--\(6.17\%\), with approximately
+first-order convergence. Full physical evolution is also sensitive to the
+finite large-\(b\) closure, particularly in the backward-evolved NNLO gluon
+channel.
+\end{abstract}
 
 \tableofcontents
 
-\section{Purpose of this report}
+\section{Evolution problem and numerical domain}
 
-This is the companion test report to \texttt{main.tex}. The main report
-formulates the physics problem and numerical method; this document isolates
-the numerical evidence and states what that evidence does not establish.
+\subsection{Coupled \texorpdfstring{\(b\)}{b}-space evolution}
 
-The solver evolves a two-component jet function,
+The solver evolves the quark-singlet and gluon jet functions in the
+impact-parameter representation of the collinear energy--energy correlator
+(EEC) jet factor. The variable \(b\), measured in \(\mathrm{GeV}^{-1}\), is
+Fourier conjugate to the transverse momentum entering the measurement. The
+two functions are arranged as the row vector
 \[
   \Jvec(b,\mu)=\bigl(J_q(b,\mu),J_g(b,\mu)\bigr),
 \]
-where the two entries describe the quark and gluon channels. A comparison
-between several grid sizes is useful, but grid convergence alone does not
-establish that all grids are approaching the correct equation. A solver can
-converge reproducibly to the wrong answer if, for example,
-\begin{itemize}[leftmargin=1.5em]
-  \item the quark--gluon channels are transposed;
-  \item a plus distribution or delta-function term has the wrong sign;
-  \item forward evolution is correct but backward evolution is not;
-  \item the time integrator has the wrong order;
-  \item or the treatment of the finite \(b\) boundary changes the equation.
-\end{itemize}
-
-For that reason, this report uses two complementary diagnostics with known
-continuum behavior:
-\begin{enumerate}[leftmargin=1.5em]
-  \item an artificial local kernel that isolates part of the time-evolution
-  code;
-  \item a physical momentum-conservation mode that checks the QCD kernels and
-  exposes finite-domain effects.
-\end{enumerate}
-
-\section{The equation and the numerical domain}
-
-\subsection{Continuum evolution}
-
-The continuum equation is
+according to
 \begin{equation}
   \frac{\partial}{\partial\ln\mu^2}\Jvec(b,\mu)
   =
@@ -94,69 +78,444 @@ The continuum equation is
   \Jvec\left(\frac{b}{y},\mu\right)\Pmat(y,\mu),
   \label{eq:continuum-rg}
 \end{equation}
-where \(\Pmat\) is the time-like splitting matrix. The jet function is written
-as a row vector, so the component equations are
+where
+\[
+  \Pmat=
+  \begin{pmatrix}
+    P_{qq} & P_{qg}\\
+    P_{gq} & P_{gg}
+  \end{pmatrix}.
+\]
+The convention is that \(P_{ij}\) describes a daughter of type \(i\)
+produced from a parent of type \(j\). The component equations are therefore
 \begin{align}
-  \partial_t J_q
+  \partial_tJ_q
   &=
-  \int_0^1 \dd y\,y^2
+  \int_0^1\dd y\,y^2
   \left[
     J_q(b/y,t)P_{qq}(y,t)
     +J_g(b/y,t)P_{gq}(y,t)
   \right],
-  \\
-  \partial_t J_g
+  \label{eq:component-q}\\
+  \partial_tJ_g
   &=
-  \int_0^1 \dd y\,y^2
+  \int_0^1\dd y\,y^2
   \left[
     J_q(b/y,t)P_{qg}(y,t)
     +J_g(b/y,t)P_{gg}(y,t)
   \right],
+  \label{eq:component-g}
 \end{align}
-with \(t=\ln\mu^2\).
+with \(t=\ln\mu^2\). The flavor multiplicity of the quark-singlet channel is
+included in \(P_{qg}\).
 
-The boundary condition is not given at one common value of \(\mu\). Instead,
-each value of \(b\) has its own starting scale,
-\[
-  \mu_*(b)=\frac{b_0}{b_*(b)},\qquad
-  t_*(b)=\ln\mu_*^2(b).
-\]
-The boundary therefore forms a curve in the \((\ln b,t)\) plane. The numerical
-solution above this curve is obtained by forward evolution. The solution below
-the curve is obtained by backward evolution.
-
-\subsection{Lattice approximation}
-
-The code uses a uniform lattice in
-\[
-  \ell=\ln b,
-\]
-and samples \(u=-\ln y\) with the same spacing. This makes every shifted point
-\(\ell+u\) land exactly on another lattice point, so no interpolation is needed
-inside the convolution.
-
-The numerical lattice is finite. If \(b/y\) lies above the largest stored
-value \(b_{\mathrm{grid,max}}\), the code sets the jet function to zero:
+The perturbative expansion is
 \begin{equation}
-  \Jvec(b>b_{\mathrm{grid,max}},t)=0.
+  P_{ij}(y,\mu)
+  =
+  \sum_{L=0}^{\infty}
+  \as^{L+1}(\mu)P_{ij}^{(L)}(y),
+  \qquad
+  \as=\frac{\alpha_s}{4\pi}.
+  \label{eq:pert-series}
+\end{equation}
+The solver options \texttt{order=0}, \(1\), and \(2\) retain the cumulative
+leading-order (LO), next-to-leading-order (NLO), and NNLO series,
+respectively.
+
+\subsection{Boundary curve and lattice}
+
+Boundary data are supplied on the canonical scale
+\begin{equation}
+  \mu_*(b)=\frac{b_0}{b_*(b)},
+  \qquad
+  t_*(b)=\ln\mu_*^2(b).
+  \label{eq:boundary-curve}
+\end{equation}
+Here \(b_0=2\ee^{-\gamma_E}\simeq1.12292\) is dimensionless, while \(b_*(b)\)
+has the same units as \(b\). A standard saturating prescription is
+\[
+  b_*(b)=\frac{b}{\sqrt{1+b^2/b_{\mathrm{sat}}^2}},
+\]
+which approaches \(b\) for \(b\ll b_{\mathrm{sat}}\) and
+\(b_{\mathrm{sat}}\) for \(b\gg b_{\mathrm{sat}}\). The solver accepts any
+positive prescription whose sampled canonical scales have the ordering
+described below.
+
+Choose \(n_b\ge2\) spatial nodes, uniform in \(\ell=\ln b\) and ordered from
+large to small \(b\):
+\begin{align}
+  \ell_i&=\ell_{\max}-(i-1)\Delta\ell,
+  &
+  \Delta\ell&=\frac{\ell_{\max}-\ell_{\min}}{n_b-1},
+  \\
+  b_i&=\ee^{\ell_i},
+  &
+  t_i&=t_*(b_i),
+  \qquad i=1,\ldots,n_b.
+\end{align}
+The \(t\)-grid is therefore derived entirely from the same \(b\)-grid and
+\(b_*\) prescription: there is exactly one \(t_i\) for every \(\ell_i\), with
+no independent time range or sorting. The implementation requires
+\(t_{i+1}>t_i\). Boundary values occupy the diagonal lattice points
+\((\ell_i,t_i)\) exactly. At fixed \(b_i\), entries with time index \(n>i\)
+are obtained by forward evolution and those with \(n<i\) by backward
+evolution.
+
+The convolution variable is \(u=-\ln y\), sampled with the same spacing,
+\(u_m=m\Delta\ell\) and \(y_m=\ee^{-u_m}\). The identity
+\[
+  \ln(b_i/y_m)=\ell_i+u_m=\ell_{i-m}
+\]
+places every shifted argument on another spatial node. This avoids
+interpolation inside the convolution and gives the discrete dependence its
+one-sided triangular structure.
+
+The numerical domain is finite. Whenever \(b/y>b_{\max}\), the solver uses
+\begin{equation}
+  \Jvec(b>b_{\max},t)=0.
   \label{eq:zero-closure}
 \end{equation}
-Equation~\eqref{eq:zero-closure} is called the \emph{zero closure}. It is a
-physical approximation, not merely an implementation detail. It must therefore
-be distinguished from errors in the time integrator.
+This closure is appropriate only when the physical boundary and evolved
+solution are already negligible near \(b_{\max}\). Otherwise the omitted
+large-\(b\) tail becomes a source of numerical error, especially in diagonal
+channels containing plus distributions.
 
-For diagonal plus distributions, a sharp closure also requires
-\(\Jvec(b_{\mathrm{grid,max}},t)\) itself to be negligible. Otherwise the
-shifted real term is set to zero immediately below \(y=1\), while the endpoint
-self-subtraction remains. This discontinuity produces logarithmic sensitivity
-to the first lattice spacing.
+\subsection{Dimensionless comparison measures}
 
-\section{Test 1: exactly solvable local evolution}
+Scalar quantities with a nonzero reference value are compared using
+\begin{equation}
+  \delta_{\mathrm{rel}}
+  =
+  \left|
+    \frac{x_{\mathrm{num}}}{x_{\mathrm{ref}}}-1
+  \right|.
+  \label{eq:scalar-relative}
+\end{equation}
+For arrays, two relative measures are used:
+\begin{align}
+  \epsilon_2
+  &=
+  \frac{\lVert \bm x_{\mathrm{num}}-\bm x_{\mathrm{ref}}\rVert_2}
+       {\lVert \bm x_{\mathrm{ref}}\rVert_2},
+  \label{eq:relative-l2}\\
+  \epsilon_{\mathrm{RMS}}
+  &=
+  \sqrt{
+    \frac{1}{n_{\mathrm{samp}}}
+    \sum_k
+    \left|
+      \frac{x_k^{\mathrm{num}}}{x_k^{\mathrm{ref}}}-1
+    \right|^2
+  }.
+  \label{eq:pointwise-rms}
+\end{align}
+The first is a global relative \(L^2\) difference; the second gives equal
+weight to the pointwise relative difference at each sampled value.
 
-\subsection{Logic of the test}
+When two resolutions are compared, the observed convergence order is
+\begin{equation}
+  p=
+  \frac{\ln(\epsilon_{\mathrm{coarse}}/\epsilon_{\mathrm{fine}})}
+       {\ln(h_{\mathrm{coarse}}/h_{\mathrm{fine}})}.
+  \label{eq:observed-order}
+\end{equation}
+Here \(h=\Delta\ell\) for the spatial-convolution test and \(h=\Delta t\), or
+the maximum \(\Delta t\) for a nonuniform grid, for the time-evolution tests.
 
-The first test removes the nonlocal convolution and replaces the physical
-kernel by
+Some exact identities require two nonzero contributions to cancel. A
+relative difference from zero is undefined, so cancellation is measured by
+the normalized residual
+\begin{equation}
+  \eta(a,b)=\frac{|a+b|}{|a|+|b|}.
+  \label{eq:normalized-residual}
+\end{equation}
+This is dimensionless and measures the defect relative to the terms being
+cancelled. All result tables below use relative differences or normalized
+residuals.
+
+\section{Active-flavor prescription}
+
+Two flavor schemes are supported: a variable-flavor-number scheme (VFNS) and
+a fixed five-flavor scheme:
+\begin{equation}
+n_f(\mu;\texttt{:VFNS})=
+\begin{cases}
+3,&\mu<m_c,\\
+4,&m_c\le\mu<m_b,\\
+5,&m_b\le\mu<m_t,\\
+6,&m_t\le\mu,
+\end{cases}
+\qquad
+n_f(\mu;\texttt{:nf5})=5.
+\label{eq:nf-schemes}
+\end{equation}
+The current threshold values are
+\[
+  m_c=1.27~\mathrm{GeV},\qquad
+  m_b=4.18~\mathrm{GeV},\qquad
+  m_t=172.76~\mathrm{GeV}.
+\]
+
+The tests evaluate the flavor function immediately below and exactly at every
+threshold. They also construct splitting-kernel table rows on both sides of a
+threshold and compare them with direct kernel evaluations using the flavor
+number selected at the same scale. Both schemes return the specified values,
+the kernel tables use the same prescription, and invalid schemes or
+nonpositive scales are rejected.
+
+These checks establish consistency of flavor selection within the numerical
+implementation. The threshold masses are fixed input parameters for this
+validation; their phenomenological determination is outside its scope.
+
+\section{Numerical strong coupling}
+
+Within an interval of fixed \(n_f\), the one-loop running coupling satisfies
+\begin{equation}
+  \frac{1}{\alpha_s(\mu_2)}
+  =
+  \frac{1}{\alpha_s(\mu_1)}
+  +\frac{\beta_0(n_f)}{2\pi}
+   \ln\frac{\mu_2}{\mu_1}.
+  \label{eq:one-loop-alpha}
+\end{equation}
+The numerical coupling is initialized from
+\[
+  \alpha_s(M_Z)=0.118,\qquad M_Z=91.1876~\mathrm{GeV}.
+\]
+It integrates the \(K\)-loop beta function with the Tsitouras 5/4 Runge--Kutta
+method, using relative and absolute ODE tolerances \(10^{-10}\) and
+\(10^{-12}\). The analytic comparison below sets \(K=1\); the subsequent
+fixed-flavor comparison sets \(K=4\).
+
+For VFNS, this expression is applied successively across every flavor
+interval between the reference and target scales. Numerical one-loop
+evolution agrees with this piecewise analytic result to better than
+\(2\times10^{-8}\) relative at
+\[
+  \mu=1.1,\ 2,\ 10,\ 300~\mathrm{GeV}.
+\]
+The tested coupling is positive, decreases monotonically with \(\mu\), and
+is continuous across \(m_c\), \(m_b\), and \(m_t\).
+
+As a separate fixed-\(n_f=5\) regression, the four-loop result was compared
+with an independently integrated ODE using stored rounded beta coefficients
+and with a closed-form truncated resummed expansion. All three calculations
+use the common reference pair
+\(\alpha_s(91.2~\mathrm{GeV})=0.118\) and are evaluated over
+\[
+  \mu=2,\ 4.18,\ 5,\ 10,\ 20,\ 50,\ 91.2,\ 100,\ 160,\ 500~\mathrm{GeV}.
+\]
+
+\begin{table}[H]
+\centering
+\caption{Maximum relative difference between the numerical
+\texttt{:nf5} coupling and two independent fixed-flavor references.}
+\label{tab:fixed-alpha}
+\begin{tabular}{lr}
+\toprule
+Reference & Maximum relative difference\\
+\midrule
+Numerical ODE with stored rounded coefficients & \(2.22\times10^{-7}\)\\
+Truncated resummed expression & \(1.59\times10^{-3}\)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The first difference is consistent with replacing rounded stored beta
+coefficients by analytic \(n_f\)-dependent coefficients. The larger
+difference from the truncated expression occurs at \(2~\mathrm{GeV}\).
+All formulations are equal by construction at the shared reference scale.
+
+The VFNS implementation changes beta-function coefficients at the heavy-quark
+thresholds while keeping \(\alpha_s\) continuous. It does not include finite
+higher-order decoupling coefficients, so it represents continuous threshold
+switching rather than a complete precision matching prescription.
+
+\section{Splitting kernels and published Mellin moments}
+
+For a splitting-kernel coefficient, define the Mellin moment
+\begin{equation}
+  \gamma_{T,ij}^{(L)}(N)
+  =
+  -\int_0^1\dd y\,y^{N-1}P_{ij}^{(L)}(y).
+  \label{eq:published-moment}
+\end{equation}
+For a diagonal channel, this integral combines the regular function, delta
+function, and plus-distribution terms. It therefore probes the complete
+distributional kernel rather than isolated values of its regular part.
+
+Appendix A of Ref.~\cite{Dixon:2019uzg} gives \(N=3\) time-like moments in
+the convention of Eq.~\eqref{eq:published-moment}. All four singlet channels
+were compared through NNLO for \(n_f=3,4,5,6\). The same reference also
+provides moments with an additional \(\ln y\) weight and, at LO, a
+\(\ln^2y\) weight. Because these logarithmic weights vanish at \(y=1\), they
+test combinations of regular and plus-distribution terms that differ from
+the ordinary \(N=3\) moments.
+
+\begin{table}[H]
+\centering
+\caption{Maximum relative difference from the published moments over all
+four channels and \(n_f=3,4,5,6\).}
+\label{tab:published-moments}
+\begin{tabular}{lr}
+\toprule
+Quantity & Maximum relative difference\\
+\midrule
+\(P^{(0)}\), LO & \(4.44\times10^{-16}\)\\
+\(P^{(1)}\), NLO & \(4.23\times10^{-10}\)\\
+\(P^{(2)}\), NNLO & \(1.15\times10^{-4}\)\\
+Published logarithmic moments & \(2.29\times10^{-10}\)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The LO result is at floating-point roundoff, and the NLO and logarithmic
+moments agree at numerical integration precision. The largest NNLO
+difference occurs in the \(qg\) moment at \(n_f=6\). Its larger size is
+expected because the three-loop kernels are implemented as decimal
+parametrizations rather than exact analytic functions.
+
+\section{Conservation of longitudinal momentum}
+
+In a time-like collinear splitting, \(y\) is the fraction of the parent's
+large light-cone momentum carried by a daughter parton. For massless
+collinear partons this is also the daughter energy fraction. Conservation of
+this quantity requires the first momentum moment of all daughters from a
+fixed parent to sum to zero.
+
+Define
+\begin{equation}
+  M_{ij}
+  =
+  \int_0^1\dd y\,y\,P_{ij}(y).
+  \label{eq:momentum-matrix}
+\end{equation}
+The quark-parent and gluon-parent identities are
+\begin{align}
+  M_{qq}+M_{gq}&=0,
+  \label{eq:q-parent-sum}\\
+  M_{qg}+M_{gg}&=0.
+  \label{eq:g-parent-sum}
+\end{align}
+The quark multiplicity is already included in the singlet \(P_{qg}\).
+Equations~\eqref{eq:q-parent-sum} and \eqref{eq:g-parent-sum} are the
+\(N=2\) Mellin-moment relations because the Mellin weight is
+\(y^{N-1}=y\).
+
+Real-emission terms redistribute momentum between daughter channels, while
+the delta and plus-distribution terms supply the virtual contribution needed
+for the cancellation. The quality of that cancellation is measured with
+Eq.~\eqref{eq:normalized-residual}:
+\[
+  \eta_q=\eta(M_{qq},M_{gq}),
+  \qquad
+  \eta_g=\eta(M_{qg},M_{gg}).
+\]
+
+\begin{table}[H]
+\centering
+\caption{Normalized momentum-conservation residuals for each perturbative
+coefficient at \(n_f=5\).}
+\label{tab:coefficient-momentum}
+\begin{tabular}{lrr}
+\toprule
+Coefficient & Quark parent \(\eta_q\) & Gluon parent \(\eta_g\)\\
+\midrule
+\(P^{(0)}\) & \(6.25\times10^{-17}\) & \(0\)\\
+\(P^{(1)}\) & \(2.10\times10^{-10}\) & \(2.35\times10^{-10}\)\\
+\(P^{(2)}\) & \(1.64\times10^{-6}\) & \(4.61\times10^{-6}\)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The solver uses the cumulative perturbative series rather than an isolated
+coefficient. Table~\ref{tab:cumulative-momentum} gives the corresponding
+normalized residuals at \(\as=0.01\).
+
+\begin{table}[H]
+\centering
+\caption{Normalized momentum-conservation residuals of the cumulative
+kernels at \(\as=0.01\) and \(n_f=5\).}
+\label{tab:cumulative-momentum}
+\begin{tabular}{lrr}
+\toprule
+Included terms & Quark parent \(\eta_q\) & Gluon parent \(\eta_g\)\\
+\midrule
+LO & \(0\) & \(0\)\\
+LO+NLO & \(1.67\times10^{-11}\) & \(3.57\times10^{-11}\)\\
+LO+NLO+NNLO & \(1.07\times10^{-8}\) & \(9.56\times10^{-8}\)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The coefficient-level residual grows at NNLO because of the decimal
+three-loop parametrization, but it remains below five parts per million.
+Perturbative weighting reduces the residual of the cumulative NNLO kernel
+below \(10^{-7}\) for \(\as=0.01\).
+
+\section{Discrete physical convolution}
+
+The discrete convolution must combine the regular, delta, and generalized
+plus-distribution pieces with the correct channel orientation. It is tested
+using the smooth functions
+\begin{align}
+  J_q(b)&=\ee^{-2b}(1+0.3b),\\
+  J_g(b)&=0.7\,\ee^{-1.5b}(1+0.2b),
+\end{align}
+which are negligible before the closure point \(b_{\max}=30\). This prevents
+the finite-domain boundary from dominating the comparison.
+
+At the midpoint node,
+\[
+  i=(n_b+1)/2,\qquad
+  b_i=\sqrt{b_{\min}b_{\max}}
+      =0.173205\ldots~\mathrm{GeV}^{-1},
+\]
+one application of the lattice right-hand side is compared with adaptive
+continuum quadrature. The continuum reference
+evaluates each plus prescription directly as the difference between the
+shifted real value and the endpoint value; it does not use the lattice
+weights. The calculation uses
+\[
+  n_b=65,\ 129,\ 257,\qquad
+  b_{\min}=10^{-3}~\mathrm{GeV}^{-1},\qquad
+  b_{\max}=30~\mathrm{GeV}^{-1},\qquad
+  \mu=20~\mathrm{GeV},
+\]
+the VFNS coupling evolved with the four-loop beta function, and cumulative
+LO, NLO, and NNLO kernels.
+
+\begin{table}[H]
+\centering
+\caption{Relative convolution difference at \(n_b=257\) and observed
+convergence order between \(n_b=129\) and \(n_b=257\).}
+\label{tab:physical-convolution}
+\begin{tabular}{lrrrr}
+\toprule
+Perturbative order
+  & Quark difference & Quark rate
+  & Gluon difference & Gluon rate\\
+\midrule
+LO & \(6.002\%\) & 0.978 & \(4.860\%\) & 0.987\\
+NLO & \(6.174\%\) & 0.964 & \(3.358\%\) & 1.292\\
+NNLO & \(6.162\%\) & 0.964 & \(2.892\%\) & 1.421\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both channels improve under each refinement at every perturbative order.
+The channel mapping and distributional formula therefore converge toward
+the independent continuum calculation. The observed rates also identify the
+dominant limitation: the quark convolution is approximately first order and
+  still differs from the continuum result by about \(6\%\) at \(n_b=257\).
+The larger two-grid rates in the gluon channel can include cancellation
+between separate error contributions and should not be interpreted as an
+asymptotic order above one.
+
+\section{Local evolution across the boundary curve}
+
+Time integration is isolated from the nonlocal convolution by choosing
 \begin{equation}
   \Pmat(y)=
   \begin{pmatrix}
@@ -166,67 +525,35 @@ kernel by
   \delta(1-y).
   \label{eq:local-kernel}
 \end{equation}
-Because the delta function selects \(y=1\), the shifted argument \(b/y\)
-equals \(b\). Each lattice node then obeys an independent ordinary
-differential equation,
-\begin{equation}
-  \partial_t J_q=c_qJ_q,\qquad
-  \partial_t J_g=c_gJ_g.
-\end{equation}
-If the boundary value at a particular \(b\) is imposed at \(t_*(b)\), the exact
-solution on either side of the boundary is
+Each spatial node then obeys an independent ordinary differential equation.
+For boundary data at \(t_*(b)\), the exact solution on either side of the
+boundary is
 \begin{align}
   J_q(b,t)
   &=J_q\bigl(b,t_*(b)\bigr)
-    \exp\left[c_q\bigl(t-t_*(b)\bigr)\right],
-  \label{eq:exact-local-q}\\
+    \exp\left[c_q\bigl(t-t_*(b)\bigr)\right],\\
   J_g(b,t)
   &=J_g\bigl(b,t_*(b)\bigr)
     \exp\left[c_g\bigl(t-t_*(b)\bigr)\right].
-  \label{eq:exact-local-g}
 \end{align}
 
-This test is intentionally not a QCD test. It answers a narrower question:
-\begin{quote}
-Does the code evolve a known local differential equation correctly from a
-\(b\)-dependent boundary line, both upward and downward in \(t\)?
-\end{quote}
-
-The calculation used
-\[
-  0.5\le b\le2.0,\qquad b_*(b)=b,
-\]
+The calculation uses \(0.5\le b/(\mathrm{GeV}^{-1})\le2.0\),
+\(b_*(b)=b\),
 \[
   J_q\bigl(b,t_*(b)\bigr)=1+0.2b,\qquad
   J_g\bigl(b,t_*(b)\bigr)=0.7+0.1b,
 \]
-with \(c_q=0.4\) and \(c_g=-0.3\). Thus \(t_*(\ell)\) is affine and the time
-grid is uniform. Every stored value was compared with
-Eqs.~\eqref{eq:exact-local-q} and \eqref{eq:exact-local-g}. The reported RMS
-error is
-\begin{equation}
-  \epsilon_{\mathrm{RMS}}
-  =
-  \sqrt{
-    \frac{1}{N_{\mathrm{values}}}
-    \sum_k
-    \left(
-      \frac{J_k^{\mathrm{num}}}{J_k^{\mathrm{exact}}}-1
-    \right)^2
-  }.
-  \label{eq:rms-relative}
-\end{equation}
+and rates \(c_q=0.4\), \(c_g=-0.3\). Every stored value in both full-plane
+regions is compared with the exact exponential.
 
-\subsection{Results}
-
-\begin{table}[ht]
+\begin{table}[H]
 \centering
-\caption{Local-kernel convergence. The observed order is calculated between
-successive refinements.}
+\caption{Relative convergence of the local full-plane evolution.}
 \label{tab:local-results}
 \begin{tabular}{llrrrr}
 \toprule
-Method & Nodes & \(\Delta t\) & RMS error & Maximum error & Observed order\\
+Method & \(n_b\) & \(\Delta t\)
+  & Relative RMS & Maximum relative & Observed order\\
 \midrule
 Euler & 17  & \(1.733\times10^{-1}\) & \(1.340\times10^{-2}\) & \(3.951\times10^{-2}\) & --\\
 Euler & 33  & \(8.664\times10^{-2}\) & \(6.531\times10^{-3}\) & \(1.948\times10^{-2}\) & 1.036\\
@@ -241,178 +568,172 @@ RK2 & 129 & \(2.166\times10^{-2}\) & \(4.382\times10^{-6}\) & \(1.397\times10^{-
 \end{tabular}
 \end{table}
 
-Euler is expected to be first order: halving the step should approximately
-halve the error. RK2 is expected to be second order: halving the step should
-approximately divide the error by four. Table~\ref{tab:local-results} shows
-exactly these behaviors. The test includes the upper and lower triangles
-simultaneously. It verifies the signs and observed integration order of the
-forward and backward local updates on this affine boundary. Because all
-shifted kernels are zero, it does not test nonlocal dependencies, channel
-mixing, a nonlinear \(b_*\) curve, or every midpoint construction used by the
-physical lower-region solve.
+Euler converges at first order and midpoint RK2 at second order. Because the
+comparison covers both sides of the boundary, it verifies the time-step sign,
+boundary indexing, and preservation of diagonal boundary data in both the
+forward and backward passes.
 
-\section{Test 2: the physical momentum-conservation diagnostic}
+\section{Nonlocal full-plane evolution}
 
-\subsection{Why a power of \texorpdfstring{\(b\)}{b} simplifies the convolution}
-
-Consider a trial function
-\begin{equation}
-  \Jvec(b,t)=b^\nu\bm v(t),
-  \label{eq:power-mode}
-\end{equation}
-where \(\bm v\) contains the quark and gluon coefficients. The shifted
-function is
+The local calculation does not exercise shifted arguments or channel mixing.
+A second manufactured problem collects the semi-discrete state into
 \[
-  \Jvec(b/y,t)=b^\nu y^{-\nu}\bm v(t).
+  \bm x(t)=
+  \bigl(J_{q,1},\ldots,J_{q,n_b},
+        J_{g,1},\ldots,J_{g,n_b}\bigr)^T
 \]
-Substituting this expression into Eq.~\eqref{eq:continuum-rg} gives
+and evolves it with
 \begin{equation}
-  \partial_t\Jvec(b,t)
+  \frac{\dd\bm x}{\dd t}
   =
-  b^\nu\bm v(t)
-  \int_0^1\dd y\,y^{2-\nu}\Pmat(y,t).
-\end{equation}
-The integral is a Mellin moment of the splitting matrix. In the standard
-notation,
-\begin{equation}
-  N=3-\nu,\qquad
-  \bm\Gamma(N,t)
-  =
-  \int_0^1\dd y\,y^{N-1}\Pmat(y,t).
-  \label{eq:mellin-moment}
-\end{equation}
-Thus a nonlocal convolution in \(b\) becomes multiplication by a
-two-by-two matrix.
-
-\subsection{Why \texorpdfstring{\(J_q=J_g=b\)}{Jq = Jg = b} should not evolve}
-
-Choose \(\nu=1\), so \(N=2\). The \(N=2\) moment measures the total momentum
-carried through a splitting. A parton splitting can redistribute momentum
-between quarks and gluons, but it cannot create or destroy total momentum.
-This is the momentum sum rule.
-
-For the LO kernels implemented in the code,
-\begin{equation}
-  \bm\Gamma^{(0)}(2)
-  =
-  \begin{pmatrix}
-    -32/9 & 10/3\\
-     32/9 & -10/3
-  \end{pmatrix}.
-  \label{eq:lo-moment-matrix}
-\end{equation}
-The row vector \((1,1)\) is a left zero-eigenvector:
-\begin{equation}
-  (1,1)\bm\Gamma^{(0)}(2)=(0,0).
-  \label{eq:zero-eigenvector}
-\end{equation}
-Combining Eqs.~\eqref{eq:power-mode} and \eqref{eq:zero-eigenvector} gives the
-special continuum solution
-\begin{equation}
-  J_q(b,\mu)=J_g(b,\mu)=b,
-  \label{eq:stationary-solution}
-\end{equation}
-independent of \(\mu\). The boundary function for the numerical test is
-therefore simply
-\begin{equation}
-  \Jvec\bigl(b,\mu_*(b)\bigr)=(b,b).
-\end{equation}
-
-At the continuum level this is a useful physical diagnostic. A swap between
-\(P_{qg}\) and \(P_{gq}\), an incorrect delta coefficient, or an incorrect
-plus-distribution subtraction generally destroys the cancellation in
-Eq.~\eqref{eq:zero-eigenvector}. Its realization on the finite lattice needs
-the separate closure qualification discussed below.
-
-\subsection{Direct test of the implemented splitting kernels}
-
-Before evolving on a lattice, the \(N=2\) moments were integrated directly
-from the implemented fixed-\(n_f=5\) splitting functions. The coupling was
-set to \(\as=\alpha_s/(4\pi)=0.01\). The two quantities that must vanish are
-\begin{equation}
-  \Gamma_{qq}(2)+\Gamma_{gq}(2),
+  \left[1+\lambda(t-t_0)\right]\bm A_0\bm x,
   \qquad
-  \Gamma_{qg}(2)+\Gamma_{gg}(2).
+  \lambda=0.15.
+  \label{eq:manufactured-ode}
 \end{equation}
+The operator is specified component by component as
+\begin{align}
+  (\bm A_0\bm x)_{q,i}
+  &=
+  0.12J_{q,i}
+  +\mathbf{1}_{i>1}
+  \left(0.07J_{q,i-1}+0.09J_{g,i-1}\right),
+  \\
+  (\bm A_0\bm x)_{g,i}
+  &=
+  -0.08J_{g,i}
+  +\mathbf{1}_{i>1}
+  \left(-0.05J_{q,i-1}+0.04J_{g,i-1}\right).
+  \label{eq:manufactured-operator}
+\end{align}
+It contains local and one-node-shift terms in all four channels, with the
+same one-sided dependence as the lattice convolution. In the channel-major
+ordering of \(\bm x\), \(\bm A_0\) is a \(2\times2\) block matrix whose four
+spatial blocks are lower bidiagonal. At
+\(t_0=t_1\), the reference state is
+\begin{align}
+  J_{q,i}(t_0)&=1+0.2\,b_i/b_{\max},\\
+  J_{g,i}(t_0)&=0.8-0.1\,b_i/b_{\max}.
+  \label{eq:manufactured-initial}
+\end{align}
 
-\begin{table}[ht]
+Because the time dependence is a scalar multiple of a fixed matrix, the exact
+solution is
+\begin{equation}
+  \bm x(t)
+  =
+  \exp\left\{
+    \left[
+      \Delta t+\frac{\lambda}{2}\Delta t^2
+    \right]\bm A_0
+  \right\}\bm x(t_0).
+  \label{eq:manufactured-exact}
+\end{equation}
+The test uses
+\[
+  0.2\le b/(\mathrm{GeV}^{-1})\le2.0,\qquad
+  b_*(b)=\frac{b}{\sqrt{1+(b/b_{\mathrm{sat}})^2}},
+  \qquad b_{\mathrm{sat}}=0.8~\mathrm{GeV}^{-1}.
+\]
+At every diagonal lattice point, the boundary input is taken directly from
+Eq.~\eqref{eq:manufactured-exact}:
+\[
+  J_{q,i}(t_i)=[\bm x(t_i)]_{q,i},
+  \qquad
+  J_{g,i}(t_i)=[\bm x(t_i)]_{g,i}.
+\]
+The numerical method then reconstructs both full-plane regions without using
+the exact solution away from this boundary.
+
+\begin{table}[H]
 \centering
-\caption{Direct momentum-sum residuals of the implemented kernels at
-\(\as=0.01\).}
-\label{tab:moment-sums}
-\begin{tabular}{lrr}
+\caption{Global relative \(L^2\) difference for the manufactured nonlocal
+problem.}
+\label{tab:nonlocal-results}
+\begin{tabular}{lrrr}
 \toprule
-Perturbative order & Quark-column residual & Gluon-column residual\\
+Method & \(n_b=17\) & \(n_b=33\) & Observed order\\
 \midrule
-LO   & \( 6.94\times10^{-18}\) & \(-6.94\times10^{-18}\)\\
-NLO  & \(-2.44\times10^{-12}\) & \(-4.24\times10^{-12}\)\\
-NNLO & \( 5.54\times10^{-8}\)  & \( 6.17\times10^{-9}\)\\
+Euler & \(1.0754\times10^{-2}\) & \(5.2908\times10^{-3}\) & 1.031\\
+RK2 & \(1.9121\times10^{-4}\) & \(4.7539\times10^{-5}\) & 2.022\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The LO residual is at floating-point roundoff. The NLO residual is negligible
-at the numerical integration tolerance. The small NNLO residual is consistent
-with the decimal parametrizations used for the NNLO kernels. These results
-support the implemented channel orientation and quantify the continuum
-momentum-sum defect at each perturbative order.
+The expected first- and second-order rates are recovered. This calculation
+simultaneously exercises all four local and shifted channel couplings,
+nonuniform time steps inherited from the curved boundary, midpoint kernel
+evaluation, forward marching to \(n>i\), and reverse marching to \(n<i\).
 
-\subsection{Why the lattice result is not exactly stationary}
+\section{End-to-end evolution with physical kernels}
 
-Equation~\eqref{eq:stationary-solution} is exact when the kernels obey the
-momentum sum exactly and the convolution contains the complete interval
-\(0<y<1\). The NNLO parametrization already leaves the small residual shown in
-Table~\ref{tab:moment-sums}.
+\subsection{Stationary continuum solution}
 
-The finite-lattice test adds a more important complication. Its boundary
-choice gives
+The momentum identity provides a simple exact solution of the continuum
+equation. If
 \[
-  \Jvec(b_{\mathrm{grid,max}},t_*)
+  J_q(b,\mu)=J_g(b,\mu)=b,
+\]
+then \(J_i(b/y)=b/y\), and the \(y^2\) weight in
+Eq.~\eqref{eq:continuum-rg} leaves the momentum weight \(y\):
+\begin{equation}
+  \partial_t\bigl[b(1,1)\bigr]
   =
-  (b_{\mathrm{grid,max}},b_{\mathrm{grid,max}}),
-\]
-but the zero closure sets every larger-\(b\) value to zero. For regular and
-off-diagonal terms, this removes the shifted interval
+  b(1,1)\int_0^1\dd y\,y\,\Pmat(y)=0.
+  \label{eq:stationary-from-momentum}
+\end{equation}
+Thus
+\begin{equation}
+  J_q(b,\mu)=J_g(b,\mu)=b
+  \label{eq:stationary-solution}
+\end{equation}
+is independent of \(\mu\) in the continuum.
+
+This calculation uses the numerical running coupling, physical splitting
+kernels, physical convolution, and full forward and backward evolution. The
+supplied boundary condition is
 \[
-  0<y<\frac{b}{b_{\mathrm{grid,max}}}.
+  J_q\bigl(b,t_*(b)\bigr)=J_g\bigl(b,t_*(b)\bigr)=b.
 \]
-For a diagonal plus distribution, however, the effect is not simply an
-omitted interval: the shifted real term is removed while the virtual
-self-subtraction proportional to \(\Jvec(b,t)\) remains. At the endpoint this
-is a discontinuity at \(y=1\), regulated numerically by \(\Delta\ell\).
+The active-flavor prescription is VFNS and the coupling uses the four-loop
+beta function.
+However, the exact mode grows with \(b\), whereas the numerical closure sets
+it abruptly to zero beyond \(b_{\max}\). The test is therefore an
+end-to-end diagnostic of the implementation and its finite-domain
+sensitivity, not a pure measurement of the time integrator.
 
-The lattice deviations below therefore combine three effects:
-\begin{itemize}[leftmargin=1.5em]
-  \item incompatibility between the nonzero \(J=b\) endpoint and sharp zero
-  closure, including the plus-distribution endpoint artifact;
-  \item finite-\(\Delta\ell\) convolution quadrature;
-  \item the small NNLO momentum-sum residual of the parametrized kernels.
-\end{itemize}
-Consequently, this lattice study is a stress test of the closure and
-discretization, not a clean analytic validation of the full solver.
+\subsection{Baseline result}
 
-\subsection{Stationary-mode evolution results}
+The end-to-end tables show LO and NNLO, the two endpoints of the supported
+perturbative truncations. NLO is already exercised independently in the
+kernel-moment and physical-convolution tests; including it here would not add
+a new numerical pathway. Results are summarized for
+\(b\le0.03~\mathrm{GeV}^{-1}\), a window at least a factor of \(10^3\) below
+the baseline closure point. This choice reduces direct endpoint
+contamination while retaining points on both sides of the boundary curve; the
+remaining closure sensitivity is measured separately below.
 
-Table~\ref{tab:stationary-1000} records this diagnostic with
+The baseline grid uses
 \[
-  b_{\mathrm{grid,min}}=0.001,\qquad
-  b_{\mathrm{grid,max}}=30,\qquad N=1000,
+  b_{\min}=0.001~\mathrm{GeV}^{-1},\qquad
+  b_{\max}=30~\mathrm{GeV}^{-1},\qquad
+  n_b=1000,
 \]
 midpoint RK2, and
 \[
   b_*(b)=\frac{b}{\sqrt{1+b^2/b_{\mathrm{sat}}^2}},
-  \qquad b_{\mathrm{sat}}=1.122918967
+  \qquad
+  b_{\mathrm{sat}}=1.12292~\mathrm{GeV}^{-1}.
 \]
-in the code's \(\mathrm{GeV}^{-1}\) units. Only points with \(b\le0.03\) are
-reported. This cut keeps them far from the stored endpoint, although the
-nonlocal equation still couples them to it. ``Upper'' denotes the upper matrix
-triangle and ``lower'' the lower matrix triangle. The RMS values are unweighted
-over lattice entries, and the exact diagonal is included in both sets.
+Table~\ref{tab:stationary-1000} summarizes points in the stated small-\(b\)
+window.
+The upper and lower regions lie above and below the boundary curve,
+respectively.
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
-\caption{RMS relative deviation from \(J_q=J_g=b\), using 1000 nodes and
-\(b\le0.03\).}
+\caption{Relative deviation from the stationary solution at \(n_b=1000\) and
+\(b\le0.03~\mathrm{GeV}^{-1}\).}
 \label{tab:stationary-1000}
 \begin{tabular}{llrrrr}
 \toprule
@@ -420,144 +741,147 @@ over lattice entries, and the exact diagonal is included in both sets.
 \cmidrule(lr){3-4}\cmidrule(lr){5-6}
 Order & Region & RMS & Maximum & RMS & Maximum\\
 \midrule
-LO   & Upper & \(0.232\%\) & \(0.929\%\) & \(0.567\%\) & \(2.128\%\)\\
-LO   & Lower & \(0.385\%\) & \(0.602\%\) & \(1.108\%\) & \(2.162\%\)\\
-NNLO & Upper & \(0.070\%\) & \(0.156\%\) & \(0.047\%\) & \(0.123\%\)\\
-NNLO & Lower & \(0.474\%\) & \(1.228\%\) & \(2.954\%\) & \(6.509\%\)\\
+LO & Upper & \(0.242\%\) & \(0.966\%\) & \(0.599\%\) & \(2.229\%\)\\
+LO & Lower & \(0.395\%\) & \(0.613\%\) & \(1.114\%\) & \(2.120\%\)\\
+NNLO & Upper & \(0.075\%\) & \(0.183\%\) & \(0.057\%\) & \(0.113\%\)\\
+NNLO & Lower & \(0.495\%\) & \(1.336\%\) & \(3.036\%\) & \(12.335\%\)\\
 \bottomrule
 \end{tabular}
 \end{table}
-\FloatBarrier
 
-The NNLO lower-region gluon error is the largest residual. The direct continuum
-moment defect in Table~\ref{tab:moment-sums} is too small to explain it by
-itself, but the sharp-closure artifact prevents attributing the remainder to
-one numerical component.
+The largest deviation is in the backward-evolved NNLO gluon channel. The
+separate \(n_f=5\), \(\as=0.01\) benchmark gives a normalized cumulative
+kernel residual below \(10^{-7}\), but it does not bound that residual over
+the running-coupling VFNS plane. The several-percent deviation is consistent
+with the combined effects of spatial discretization, closure, time
+resolution, repeated evolution, and kernel parametrization; these
+contributions are not isolated by this test.
 
-\subsection{Grid refinement in the lower triangle}
+\subsection{Grid refinement}
 
-\begin{table}[ht]
+\begin{table}[H]
 \centering
-\caption{Lower-triangle RMS errors for \(b\le0.03\) as the grid is refined.}
+\caption{Lower-region relative RMS deviation for
+\(b\le0.03~\mathrm{GeV}^{-1}\) under grid refinement.}
 \label{tab:lower-refinement}
 \begin{tabular}{lrrrr}
 \toprule
-Nodes & LO quark & LO gluon & NNLO quark & NNLO gluon\\
+\(n_b\) & LO quark & LO gluon & NNLO quark & NNLO gluon\\
 \midrule
-500  & \(0.748\%\) & \(2.333\%\) & \(0.952\%\) & \(2.956\%\)\\
-1000 & \(0.385\%\) & \(1.108\%\) & \(0.474\%\) & \(2.954\%\)\\
-2000 & \(0.216\%\) & \(0.554\%\) & \(0.299\%\) & \(2.702\%\)\\
+500 & \(0.761\%\) & \(2.343\%\) & \(0.980\%\) & \(2.949\%\)\\
+1000 & \(0.395\%\) & \(1.114\%\) & \(0.495\%\) & \(3.036\%\)\\
+2000 & \(0.225\%\) & \(0.558\%\) & \(0.353\%\) & \(2.840\%\)\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The LO lower-region errors decrease approximately with the lattice spacing,
-and the NNLO quark error also decreases. The NNLO gluon error improves much
-more slowly and remains \(2.70\%\) at 2000 nodes. This identifies a
-resolution-sensitive NNLO lower-region problem, but the present test cannot
-separate convolution quadrature from the incompatible endpoint closure.
+The LO deviations decrease approximately with lattice spacing, and the NNLO
+quark result also improves. The NNLO gluon result changes more slowly and is
+not monotone between 500 and 1000 nodes. This behavior indicates that more
+than one error source contributes in the backward-evolved NNLO region.
 
-\subsection{Large-\texorpdfstring{\(b\)}{b} closure check}
+\subsection{\texorpdfstring{Large-\(b\)}{Large-b} closure sensitivity}
 
-To probe closure sensitivity, \(b_{\mathrm{grid,max}}\) was increased from 30
-to 300 while approximately preserving \(\Delta\ell\): the two grids used
-\((N,b_{\mathrm{grid,max}})=(1000,30)\) and \((1223,300)\). For the LO upper
-triangle and \(b\le0.03\), the RMS errors changed as follows:
-\begin{equation}
-\begin{array}{c|cc}
-b_{\mathrm{grid,max}} & \text{quark RMS} & \text{gluon RMS}\\
-\hline
-30  & 0.232\% & 0.567\%\\
-300 & 0.041\% & 0.056\%
-\end{array}
-\end{equation}
-Moving the closure boundary ten times farther away substantially reduces the
-upper-region error. This demonstrates strong closure sensitivity, but it does
-not by itself isolate the time marcher or remove the endpoint discontinuity.
+The closure point was moved from \(30\) to \(300~\mathrm{GeV}^{-1}\) while
+approximately preserving \(\Delta\ell\):
+\[
+  (n_b,b_{\max}/\mathrm{GeV}^{-1})=(1000,30),\qquad(1223,300).
+\]
 
-\section{What has and has not been validated}
+\begin{table}[H]
+\centering
+\caption{Relative RMS deviation for \(b\le0.03~\mathrm{GeV}^{-1}\) after
+moving the closure point at approximately fixed spatial resolution.}
+\label{tab:closure-comparison}
+\begin{tabular}{llrr}
+\toprule
+Region and order & Channel & \(b_{\max}=30\) & \(b_{\max}=300\)\\
+\midrule
+LO upper & Quark & \(0.242\%\) & \(0.039\%\)\\
+LO upper & Gluon & \(0.599\%\) & \(0.050\%\)\\
+NNLO lower & Quark & \(0.495\%\) & \(0.898\%\)\\
+NNLO lower & Gluon & \(3.036\%\) & \(2.074\%\)\\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection{Validated}
+Moving the closure ten times farther away strongly improves the LO upper
+region and reduces the NNLO lower gluon deviation. It worsens the NNLO lower
+quark result, showing that closure is important but is not the only source of
+the backward-region discrepancy.
 
+\section{Overall assessment}
+
+The validation establishes the following:
 \begin{itemize}[leftmargin=1.5em]
-  \item On the local diagonal-kernel problem with \(b_*(b)=b\), the forward and
-  backward updates use the correct sign and boundary values.
-  \item Euler exhibits first-order convergence on that problem.
-  \item Midpoint RK2 exhibits second-order convergence on that problem.
-  \item The quark--gluon channel orientation is consistent with the momentum
-  sum rule.
-  \item The implemented LO kernels satisfy the \(N=2\) sum rule at roundoff,
-  the NLO residual is negligible at the integration tolerance, and the NNLO
-  parametrization leaves a residual of order \(10^{-8}\) at \(\as=0.01\).
+  \item The VFNS and fixed-\(n_f=5\) schemes select and propagate the intended
+  active-flavor count.
+  \item Numerical running agrees with piecewise analytic one-loop evolution
+  and with an independent fixed-flavor ODE using rounded beta coefficients.
+  \item All four splitting channels reproduce published ordinary and
+  logarithmic Mellin moments through the accuracy of the NNLO
+  parametrizations.
+  \item At \(n_f=5\), longitudinal-momentum conservation holds with normalized
+  residuals below \(5\times10^{-6}\) coefficient by coefficient and below
+  \(10^{-7}\) for the cumulative NNLO kernel at \(\as=0.01\).
+  \item The convolution converges toward independent continuum quadrature,
+  but its approximately first-order spatial error is larger than the
+  nominal RK2 time error at the tested resolutions.
+  \item Forward and backward time evolution recover the expected Euler and
+  RK2 convergence rates for both local and nonlocal exact problems.
+  \item End-to-end physical evolution is most sensitive in the
+  backward-evolved NNLO gluon channel and requires explicit checks of both
+  grid resolution and the large-\(b\) endpoint.
 \end{itemize}
 
-\subsection{Remaining numerical limitations}
-
+The principal limitations are:
 \begin{itemize}[leftmargin=1.5em]
-  \item A nonzero value at \(b_{\mathrm{grid,max}}\) is incompatible with the
-  sharp closure for diagonal plus distributions. The \(J=b\) lattice
-  diagnostic deliberately violates this condition.
-  \item The present lattice convolution is lower-order than RK2 and can
-  dominate the total error.
-  \item The local test does not exercise nonlocal channel coupling, a nonlinear
-  \(b_*\) curve, or all lower-region midpoint dependencies.
-  \item Refining \(\ell\) and \(t\) simultaneously does not by itself separate
-  spatial quadrature error from time-integration error.
-  \item The two diagnostic scripts print measurements but contain no asserted
-  pass/fail thresholds.
+  \item The present spatial convolution is approximately first order.
+  \item A sharp zero closure is unsuitable if the jet function is not already
+  negligible at \(b_{\max}\), particularly for diagonal plus distributions.
+  \item Refining \(n_b\) changes spatial and time resolution simultaneously,
+  which prevents a clean separation of their errors in the physical solver.
+  \item VFNS uses continuous threshold switching without finite higher-order
+  decoupling corrections.
+  \item No independent exact solution is currently available for the full
+  physical equation with a decaying boundary and a running coupling.
 \end{itemize}
-
-\section{Interpretation and recommended next steps}
-
-The diagnostics support the following narrower conclusions:
-\begin{enumerate}[leftmargin=1.5em]
-  \item The local upper and lower updates have the expected integration order
-  on an affine boundary line.
-  \item The physical kernel channel mapping and momentum sums pass a direct
-  continuum-moment check to the residuals shown in
-  Table~\ref{tab:moment-sums}.
-  \item The \(J=b\) lattice results reveal substantial closure and
-  discretization sensitivity; they do not prove the complete nonlocal
-  evolution correct.
-\end{enumerate}
-
-The most useful next improvements are therefore:
-\begin{enumerate}[leftmargin=1.5em]
-  \item enforce a vanishing endpoint or replace the sharp closure by a
-  continuous large-\(b\) tail model;
-  \item add a manufactured nonlocal triangular problem with a nonlinear
-  \(b_*(b)\) curve and a known solution;
-  \item improve the \(u\)- or \(y\)-quadrature while preserving the
-  plus-distribution subtraction;
-  \item allow extra \(t\) substeps at fixed \(\ell\) spacing, so temporal and
-  spatial convergence can be measured independently;
-  \item convert the diagnostic scripts into asserted regression tests with
-  documented tolerances.
-\end{enumerate}
 
 \section{Reproducibility}
 
-The calculations were run with Julia 1.11.6 and 20 Julia threads. From the
-repository root, the environment and asserted regression suite are:
+The calculations were run with Julia 1.11.6 and 20 Julia threads. The tested
+active environment used \texttt{DifferentialEquations} 7.16.1,
+\texttt{PolyLog} 2.6.0, and \texttt{QuadGK} 2.11.2. The standalone directory
+does not contain a project or manifest file, so the direct package versions
+are specified explicitly. From the repository root:
 \begin{verbatim}
 cd "Numerical RG"
-julia --project=. -e "using Pkg; Pkg.instantiate()"
-julia --project=. --threads=auto test/runtests.jl
+julia -e "using Pkg; for (name,version) in [
+    ("DifferentialEquations","7.16.1"),
+    ("PolyLog","2.6.0"), ("QuadGK","2.11.2")
+]; Pkg.add(name=name,version=version); end"
+julia --threads=auto test/runtests.jl
 \end{verbatim}
 
-The local convergence and direct moment diagnostics are:
+The numerical values in the tables are reproduced with:
 \begin{verbatim}
-julia --project=. --threads=auto test/analytic_validation.jl
-julia --project=. --threads=auto test/momentum_sum_check.jl
+julia --threads=auto test/analytic_validation.jl
+julia --threads=auto test/validation_metrics.jl
+julia test/momentum_sum_check.jl
+julia test/paper_moment_check.jl
 \end{verbatim}
 
-The lattice-refinement and closure rows in this report are reproduced with:
+The grid-refinement and closure calculations are run with:
 \begin{verbatim}
-julia --project=. --threads=auto test/analytic_validation.jl `
-    500:30 1000:30 2000:30 1223:300
+julia --threads=auto test/analytic_validation.jl 500 1000 2000 1223:300
 \end{verbatim}
-The regression suite contains 262 asserted checks, all of which passed. The
-analytic and momentum scripts are diagnostic only: successful process exit
-does not imply their printed residuals met a threshold.
+
+The asserted regression suite contains 542 checks. The repository workflow
+\path{.github/workflows/numerical-rg.yml} installs the required packages and
+runs the suite on Julia 1.11.
+
+\begin{thebibliography}{99}
+\input{inspire_references.tex}
+\end{thebibliography}
 
 \end{document}

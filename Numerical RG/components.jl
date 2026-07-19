@@ -5,21 +5,14 @@ struct SplittingKernelTable
     qg::Matrix{Float64}
     gq::Matrix{Float64}
     gg::Matrix{Float64}
-    qq_self_sub_vec::Vector{Float64}
-    gg_self_sub_vec::Vector{Float64}
-end
-
-function set_alpha_s_runtime!(; alpha_s_Z_value::Float64, alpha_s_loops::Int64)
-    if !isfinite(alpha_s_Z_value) || alpha_s_Z_value <= 0.0
-        throw(ArgumentError("alpha_s_Z_value must be finite and positive."))
-    end
-    if !(1 <= alpha_s_loops <= 4)
-        throw(ArgumentError("alpha_s_loops must be between 1 and 4."))
-    end
-
-    global αs_Z = alpha_s_Z_value
-    global nloops_αs = alpha_s_loops
-    return nothing
+    qq_d0_at_1_vec::Vector{Float64}
+    qq_d1_at_1_vec::Vector{Float64}
+    gg_d0_at_1_vec::Vector{Float64}
+    gg_d1_at_1_vec::Vector{Float64}
+    d0_sub_weight_vec::Vector{Float64}
+    d1_sub_weight_vec::Vector{Float64}
+    d0_closure_factor_vec::Vector{Float64}
+    d1_closure_factor_vec::Vector{Float64}
 end
 
 function build_splitting_kernel_table(;
@@ -27,8 +20,12 @@ function build_splitting_kernel_table(;
     n_nodes::Int64,
     t_grid::AbstractVector{Float64},
     order::Int64,
-    alpha_s_Z_value::Float64 = 0.118,
-    alpha_s_loops::Int64 = 4,
+    nf_scheme::Symbol = :VFNS,
+    alpha_s_ref::Float64 = DEFAULT_ALPHA_S_MZ,
+    alpha_s_mu_ref::Float64 = MZ,
+    alpha_s_order::Int64 = 4,
+    alpha_s_reltol::Float64 = 1.0e-10,
+    alpha_s_abstol::Float64 = 1.0e-12,
     alpha_s_max::Float64 = 1.0,
 )
 
@@ -47,19 +44,19 @@ function build_splitting_kernel_table(;
     if !(0 <= order <= 2)
         throw(ArgumentError("order must be 0, 1, or 2."))
     end
+    _check_nf_scheme(nf_scheme)
     if !isfinite(alpha_s_max) || alpha_s_max <= 0.0
         throw(ArgumentError("alpha_s_max must be finite and positive."))
     end
-
-    set_alpha_s_runtime!(alpha_s_Z_value = alpha_s_Z_value, alpha_s_loops = alpha_s_loops)
 
     n_shift = n_nodes - 1
     shift_vec = collect(1:n_shift)
     y_vec = exp.(-delta_ell .* shift_vec)
     shifted_weight_vec = delta_ell .* y_vec.^3
-    subtraction_weight_vec = delta_ell .* y_vec
     one_minus_y_vec = 1 .- y_vec
     log_one_minus_y_vec = log.(one_minus_y_vec)
+    d0_sub_weight_vec = delta_ell .* y_vec ./ one_minus_y_vec
+    d1_sub_weight_vec = d0_sub_weight_vec .* log_one_minus_y_vec
     y_ref = exp(-delta_ell)
 
     if !(0.0 < y_ref < 1.0)
@@ -67,11 +64,18 @@ function build_splitting_kernel_table(;
     end
 
     tail_log = log1p(-y_vec[end])
-    d0_self_factor = sum(subtraction_weight_vec ./ one_minus_y_vec) - tail_log
-    d1_self_factor = (
-        sum(subtraction_weight_vec .* log_one_minus_y_vec ./ one_minus_y_vec) -
-        0.5 * tail_log^2
-    )
+    d0_closure_factor_vec = zeros(Float64, n_nodes)
+    d1_closure_factor_vec = zeros(Float64, n_nodes)
+    d0_closure_factor_vec[end] = -tail_log
+    d1_closure_factor_vec[end] = -0.5 * tail_log^2
+    for i in (n_nodes - 1):-1:1
+        d0_closure_factor_vec[i] = (
+            d0_sub_weight_vec[i] + d0_closure_factor_vec[i + 1]
+        )
+        d1_closure_factor_vec[i] = (
+            d1_sub_weight_vec[i] + d1_closure_factor_vec[i + 1]
+        )
+    end
 
     qq_delta_at_1_vec = zeros(Float64, n_nodes)
     gg_delta_at_1_vec = zeros(Float64, n_nodes)
@@ -79,64 +83,143 @@ function build_splitting_kernel_table(;
     qg = zeros(Float64, n_nodes, n_shift)
     gq = zeros(Float64, n_nodes, n_shift)
     gg = zeros(Float64, n_nodes, n_shift)
-    qq_self_sub_vec = zeros(Float64, n_nodes)
-    gg_self_sub_vec = zeros(Float64, n_nodes)
-    a_s_vec = zeros(Float64, n_nodes)
-
-    for n in 1:n_nodes
-        mu = exp(0.5 * t_grid[n])
-        alpha_s = try
-            alpha_s_func(mu)
-        catch error
-            throw(DomainError(
-                mu,
-                "alpha_s_func failed at mu = $mu: $(sprint(showerror, error))",
-            ))
-        end
+    qq_d0_at_1_vec = zeros(Float64, n_nodes)
+    qq_d1_at_1_vec = zeros(Float64, n_nodes)
+    gg_d0_at_1_vec = zeros(Float64, n_nodes)
+    gg_d1_at_1_vec = zeros(Float64, n_nodes)
+    mu_vec = exp.(0.5 .* t_grid)
+    nf_vec = Int64[nf_func(mu; scheme = nf_scheme) for mu in mu_vec]
+    alpha_s_vec = alpha_s_grid(
+        t_grid;
+        mu_ref = alpha_s_mu_ref,
+        alpha_s_ref = alpha_s_ref,
+        order = alpha_s_order,
+        nf_scheme = nf_scheme,
+        reltol = alpha_s_reltol,
+        abstol = alpha_s_abstol,
+    )
+    a_s_vec = similar(alpha_s_vec)
+    for n in eachindex(alpha_s_vec)
+        alpha_s = alpha_s_vec[n]
         if !isfinite(alpha_s) || alpha_s <= 0.0 || alpha_s > alpha_s_max
             throw(DomainError(
                 alpha_s,
-                "alpha_s(mu = $mu) must lie in (0, $alpha_s_max].",
+                "alpha_s at t_grid[$n] must lie in (0, $alpha_s_max].",
             ))
         end
-        a_s_vec[n] = alpha_s / (4 * pi)
+        a_s_vec[n] = alpha_s / (4.0 * pi)
+    end
+
+    n_coefficients = order + 1
+    n_flavors = 4
+    qq_delta_coefficient = zeros(Float64, n_flavors, n_coefficients)
+    gg_delta_coefficient = zeros(Float64, n_flavors, n_coefficients)
+    qq_d0_at_1_coefficient = zeros(Float64, n_flavors, n_coefficients)
+    qq_d1_at_1_coefficient = zeros(Float64, n_flavors, n_coefficients)
+    gg_d0_at_1_coefficient = zeros(Float64, n_flavors, n_coefficients)
+    gg_d1_at_1_coefficient = zeros(Float64, n_flavors, n_coefficients)
+    qq_coefficient = zeros(Float64, n_flavors, n_coefficients, n_shift)
+    qg_coefficient = zeros(Float64, n_flavors, n_coefficients, n_shift)
+    gq_coefficient = zeros(Float64, n_flavors, n_coefficients, n_shift)
+    gg_coefficient = zeros(Float64, n_flavors, n_coefficients, n_shift)
+
+    flavor_is_cached = falses(n_flavors)
+    for nf in nf_vec
+        flavor_index = nf - 2
+        flavor_is_cached[flavor_index] && continue
+        flavor_is_cached[flavor_index] = true
+
+        for coefficient_index in 1:n_coefficients
+            loop_order = coefficient_index - 1
+            endpoint = timelike_splitting_coefficient_func(
+                y = y_ref,
+                loop_order = loop_order,
+                nf = nf,
+            )
+            qq_delta_coefficient[flavor_index, coefficient_index] =
+                endpoint.PqqDelta_at_1
+            gg_delta_coefficient[flavor_index, coefficient_index] =
+                endpoint.PggDelta_at_1
+            qq_d0_at_1_coefficient[flavor_index, coefficient_index] =
+                endpoint.PqqD0_at_1
+            qq_d1_at_1_coefficient[flavor_index, coefficient_index] =
+                endpoint.PqqD1_at_1
+            gg_d0_at_1_coefficient[flavor_index, coefficient_index] =
+                endpoint.PggD0_at_1
+            gg_d1_at_1_coefficient[flavor_index, coefficient_index] =
+                endpoint.PggD1_at_1
+        end
+
+        Threads.@threads :static for k in 1:n_shift
+            for coefficient_index in 1:n_coefficients
+                components = timelike_splitting_coefficient_func(
+                    y = y_vec[k],
+                    loop_order = coefficient_index - 1,
+                    nf = nf,
+                )
+                qq_coefficient[flavor_index, coefficient_index, k] =
+                    shifted_weight_vec[k] * (
+                        components.PqqReg +
+                        components.PqqD0 / one_minus_y_vec[k] +
+                        components.PqqD1 * log_one_minus_y_vec[k] /
+                        one_minus_y_vec[k]
+                    )
+                qg_coefficient[flavor_index, coefficient_index, k] =
+                    shifted_weight_vec[k] * components.Pqg
+                gq_coefficient[flavor_index, coefficient_index, k] =
+                    shifted_weight_vec[k] * components.Pgq
+                gg_coefficient[flavor_index, coefficient_index, k] =
+                    shifted_weight_vec[k] * (
+                        components.PggReg +
+                        components.PggD0 / one_minus_y_vec[k] +
+                        components.PggD1 * log_one_minus_y_vec[k] /
+                        one_minus_y_vec[k]
+                    )
+            end
+        end
     end
 
     Threads.@threads :static for n in 1:n_nodes
-        a_s = a_s_vec[n]
-        at_1_components = spliting_convolution_func(y = y_ref, as = a_s, order = order)
-
-        qq_delta_at_1_vec[n] = at_1_components.PqqDelta_at_1
-        gg_delta_at_1_vec[n] = at_1_components.PggDelta_at_1
-        qq_self_sub_vec[n] = (
-            at_1_components.PqqD0_at_1 * d0_self_factor +
-            at_1_components.PqqD1_at_1 * d1_self_factor
-        )
-        gg_self_sub_vec[n] = (
-            at_1_components.PggD0_at_1 * d0_self_factor +
-            at_1_components.PggD1_at_1 * d1_self_factor
-        )
-
-        for k in 1:n_shift
-            components = if k == 1
-                at_1_components
-            else
-                spliting_convolution_func(y = y_vec[k], as = a_s, order = order)
-            end
-
-            qq[n, k] = shifted_weight_vec[k] * (
-                components.PqqReg +
-                components.PqqD0 / one_minus_y_vec[k] +
-                components.PqqD1 * log_one_minus_y_vec[k] / one_minus_y_vec[k]
+        flavor_index = nf_vec[n] - 2
+        a_s_power = a_s_vec[n]
+        for coefficient_index in 1:n_coefficients
+            qq_delta_at_1_vec[n] += (
+                a_s_power * qq_delta_coefficient[flavor_index, coefficient_index]
             )
-            qg[n, k] = shifted_weight_vec[k] * components.Pqg
-
-            gq[n, k] = shifted_weight_vec[k] * components.Pgq
-            gg[n, k] = shifted_weight_vec[k] * (
-                components.PggReg +
-                components.PggD0 / one_minus_y_vec[k] +
-                components.PggD1 * log_one_minus_y_vec[k] / one_minus_y_vec[k]
+            gg_delta_at_1_vec[n] += (
+                a_s_power * gg_delta_coefficient[flavor_index, coefficient_index]
             )
+            qq_d0_at_1_vec[n] += (
+                a_s_power *
+                qq_d0_at_1_coefficient[flavor_index, coefficient_index]
+            )
+            qq_d1_at_1_vec[n] += (
+                a_s_power *
+                qq_d1_at_1_coefficient[flavor_index, coefficient_index]
+            )
+            gg_d0_at_1_vec[n] += (
+                a_s_power *
+                gg_d0_at_1_coefficient[flavor_index, coefficient_index]
+            )
+            gg_d1_at_1_vec[n] += (
+                a_s_power *
+                gg_d1_at_1_coefficient[flavor_index, coefficient_index]
+            )
+
+            @views qq[n, :] .+= (
+                a_s_power .* qq_coefficient[flavor_index, coefficient_index, :]
+            )
+            @views qg[n, :] .+= (
+                a_s_power .* qg_coefficient[flavor_index, coefficient_index, :]
+            )
+            @views gq[n, :] .+= (
+                a_s_power .* gq_coefficient[flavor_index, coefficient_index, :]
+            )
+            @views gg[n, :] .+= (
+                a_s_power .* gg_coefficient[flavor_index, coefficient_index, :]
+            )
+
+            a_s_power *= a_s_vec[n]
         end
     end
 
@@ -147,7 +230,13 @@ function build_splitting_kernel_table(;
         qg,
         gq,
         gg,
-        qq_self_sub_vec,
-        gg_self_sub_vec,
+        qq_d0_at_1_vec,
+        qq_d1_at_1_vec,
+        gg_d0_at_1_vec,
+        gg_d1_at_1_vec,
+        d0_sub_weight_vec,
+        d1_sub_weight_vec,
+        d0_closure_factor_vec,
+        d1_closure_factor_vec,
     )
 end

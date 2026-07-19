@@ -1,10 +1,13 @@
 using Printf
+using QuadGK
 
 include(joinpath(@__DIR__, "..", "numerical_rg.jl"))
 
-function splitting_moment_N2(; as::Float64, order::Int64)
+function splitting_moment_N2(; as::Float64, order::Int64, nf::Int64)
     function components(y)
-        return spliting_convolution_func(y = y, as = as, order = order)
+        return timelike_splitting_convolution_func(
+            y = y, as = as, order = order, nf = nf,
+        )
     end
 
     sample = components(0.5)
@@ -36,8 +39,14 @@ function splitting_moment_N2(; as::Float64, order::Int64)
     return (qq = qq, qg = qg, gq = gq, gg = gg)
 end
 
+const MOMENT_NF_SCHEME = :VFNS
+const MOMENT_MU = 20.0
 for order in 0:2
-    moments = splitting_moment_N2(as = 0.01, order = order)
+    moments = splitting_moment_N2(
+        as = 0.01,
+        order = order,
+        nf = nf_func(MOMENT_MU; scheme = MOMENT_NF_SCHEME),
+    )
     q_column_sum = moments.qq + moments.gq
     g_column_sum = moments.qg + moments.gg
     @printf(

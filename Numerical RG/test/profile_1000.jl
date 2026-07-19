@@ -2,6 +2,7 @@ using Profile
 
 include(joinpath(@__DIR__, "..", "numerical_rg.jl"))
 
+const PROFILE_NF_SCHEME = :VFNS
 bstar_func(b) = b / sqrt(1.0 + b^2 / b0^2)
 
 boundary_func(; b, bstar, mu_start) = (
@@ -16,7 +17,9 @@ warmup_solution = solve_jet_rg(
     bstar_func = bstar_func,
     boundary_func = boundary_func,
     order = 2,
+    nf_scheme = PROFILE_NF_SCHEME,
     method = :rk2,
+    closure_check = :ignore,
 )
 warmup_solution(0.5, sqrt(
     warmup_solution.lattice.mu_i_grid[1] *
@@ -37,6 +40,7 @@ elapsed = @elapsed begin
         bstar_func = bstar_func,
         boundary_func = boundary_func,
         order = 2,
+        nf_scheme = PROFILE_NF_SCHEME,
         method = :rk2,
     )
 end

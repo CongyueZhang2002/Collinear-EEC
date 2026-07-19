@@ -1,0 +1,34 @@
+name: Numerical RG
+
+on:
+  push:
+    paths:
+      - "Numerical RG/**"
+      - ".github/workflows/numerical-rg.yml"
+  pull_request:
+    paths:
+      - "Numerical RG/**"
+      - ".github/workflows/numerical-rg.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Numerical RG"
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: "1.11"
+      - uses: julia-actions/cache@v3
+        with:
+          delete-old-caches: "false"
+      - name: Install test dependencies
+        run: julia -e 'using Pkg; Pkg.add(["DifferentialEquations", "PolyLog", "QuadGK"])'
+      - name: Run asserted suite
+        run: julia --threads=auto test/runtests.jl

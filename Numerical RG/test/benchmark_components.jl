@@ -2,6 +2,7 @@ using Printf
 
 include(joinpath(@__DIR__, "..", "numerical_rg.jl"))
 
+const BENCHMARK_NF_SCHEME = :VFNS
 n_nodes = isempty(ARGS) ? 1000 : parse(Int64, ARGS[1])
 
 bstar_func(b) = b / sqrt(1.0 + b^2 / b0^2)
@@ -17,6 +18,7 @@ function build_rk2_kernel_tables(lattice::LatticeGrid)
         n_nodes = lattice.n_nodes,
         t_grid = lattice.t_grid,
         order = 2,
+        nf_scheme = BENCHMARK_NF_SCHEME,
     )
 
     midpoint_grid = copy(lattice.t_grid)
@@ -30,6 +32,7 @@ function build_rk2_kernel_tables(lattice::LatticeGrid)
         n_nodes = lattice.n_nodes,
         t_grid = midpoint_grid,
         order = 2,
+        nf_scheme = BENCHMARK_NF_SCHEME,
     )
 
     return kernel_table, midpoint_kernel_table
@@ -43,7 +46,9 @@ warmup_solution = solve_jet_rg(
     bstar_func = bstar_func,
     boundary_func = boundary_func,
     order = 2,
+    nf_scheme = BENCHMARK_NF_SCHEME,
     method = :rk2,
+    closure_check = :ignore,
 )
 warmup_tables = build_rk2_kernel_tables(warmup_solution.lattice)
 fill_lower_triangle!(
@@ -65,6 +70,7 @@ total_result = @timed solve_jet_rg(
     bstar_func = bstar_func,
     boundary_func = boundary_func,
     order = 2,
+    nf_scheme = BENCHMARK_NF_SCHEME,
     method = :rk2,
 )
 solution = total_result.value
